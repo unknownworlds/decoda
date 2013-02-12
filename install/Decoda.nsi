@@ -105,6 +105,7 @@ Section "Decoda (required)"
   File "..\bin\release\msvcr80.dll"
   File "..\bin\release\msvcm80.dll"
   File "..\bin\release\Microsoft.VC80.CRT.manifest"
+  File "..\COPYING.TXT"
 
   ; Setup the deproj file association
   WriteRegStr HKCR ".deproj" "" "Decoda.deproj"
@@ -184,6 +185,7 @@ Section "Uninstall"
   Delete $INSTDIR\msvcr80.dll
   Delete $INSTDIR\msvcm80.dll
   Delete $INSTDIR\Microsoft.VC80.CRT.manifest
+  Delete $INSTDIR\COPYING.txt
   
   ; Remove shortcuts, if any
   Delete "$SMPROGRAMS\Decoda\*.*"
