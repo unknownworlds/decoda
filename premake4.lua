@@ -36,6 +36,9 @@ project "Frontend"
     links {
 		"comctl32",
 		"rpcrt4",
+		"imagehlp",
+		"Update",
+		"Shared",		
 	}
 
     configuration "Debug"
@@ -56,15 +59,27 @@ project "Frontend"
 			"wxmsw28d_richtext",
 			"wxmsw28d_html",
 			"wxpngd",
-			"imagehlp",
-			"Update",
-			"Shared",
 		}
 
     configuration "Release"
         defines { "NDEBUG" }
         flags { "Optimize" }
         targetdir "bin/release"
+		includedirs { "libs/wxWidgets/lib/vc_lib/msw" }
+		links {
+			"wxbase28",
+			"wxmsw28_core",
+			"wxmsw28_aui",
+			"wxscintilla",
+			"wxbase28_xml",
+			"wxexpat",
+			"wxmsw28_adv",
+			"wxmsw28_qa",
+			"wxzlib",
+			"wxmsw28_richtext",
+			"wxmsw28_html",
+			"wxpng",
+		}		
 		
 project "LuaInject"
     kind "SharedLib"
