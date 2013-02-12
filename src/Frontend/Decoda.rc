@@ -1,0 +1,3 @@
+decodaIcon                  ICON                    "res/icon.ico"
+luaIcon                     ICON                    "res/luaicon.ico"
+deprojIcon                  ICON                    "res/deprojicon.ico"

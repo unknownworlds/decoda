@@ -1,0 +1,607 @@
+<?xml version="1.0" ?>
+<builds>
+
+<build>
+    <version>1035</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.17 (Build 1035)</b></p>
+<br/>
+<ul>
+<li>Added the ability to match up script files with project files even if they didn't match the file on disk (allows applications to pre-process script files before loading them in Lua)</li>
+<li>Added initial support for Lua 5.2</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1034</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.16 (Build 1034)</b></p>
+<br/>
+<ul>
+<li>Added the option to show white spaces via the settings dialog</li>
+<li>Added an error message when attempting to debug a 64-bit application (not currently supported)</li>
+<li>Added tool auto-execute on Decoda events (run tool on file save for example)</li>
+<li>Output window now scrolls to the bottom when new text is added</li>
+<li>Fixed crash bug when evaluating some expressions in the Watch window due to not expanding the Lua stack</li>
+<li>Addressed bug where Decoda would hang the first time you launched it on some machines</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1033</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.15 (Build 1033)</b></p>
+<br/>
+<ul>
+<li>Added new Search Result window</li>
+<li>Fixed bug where breaking at a breakpoint would sometimes not display the top of the call stack and would show execution broken at a different location</li>
+<li>Fixed issue where debugging a managed application would cause the application to not start properly</li>
+<li>Fixed bug where the "Load last project on startup" feature wasn't working</li>
+<li>Fixed bug where pushing down in the Project Explorer filter would not select the first item</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1032</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.14 (Build 1032)</b></p>
+<br/>
+<ul>
+<li>Removed dependency on Visual Studio 2005 Redistributable</li>
+<li>Changed the cursor color to be the inverse of the background color so it's visible on a black background</li>
+<li>Added the ability to specify the line number to open a file to on the command line (using File.lua:100 syntax)</li>
+<li>Added basic mixed language call stack</li>
+<li>Fixed bug where the Project Explorer would attempt to parse code inside of comments</li>
+<li>Fixed bug where changing some properties in the Project Settings would not cause the deuser file to be updated</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1031</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.13 (Build 1031)</b></p>
+<br/>
+<ul>
+<li>Added support for displaying classes created with luabind in the Watch window</li>
+<li>Added work-around for lack of C call return hooks in LuaJIT 2.0</li>
+<li>Added the ability for applications to optionally return a "class" name from __towatch</li>
+<li>Changed the debugger to automatically show the calling Lua line when a C function generates an error with lua_error/luaL_error</li>
+<li>Fixed displaying of UTF8 data in the watch window</li>
+<li>Fixed deadlock when inspecting loaded DLLs in some applications</li>
+<li>Fixed bug where the registration key would not be remembered on some computers</li>
+<li>Fixed occasional crash bug when deleting items in the Watch window</li>
+<li>Fixed bug where additional memory would be used every time luaL_newmetatable was called, even if the metatable already existed</li>
+</ul>
+]]>
+</desc>
+</build>
+
+
+<build>
+    <version>1030</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.12 (Build 1030)</b></p>
+<br/>
+<ul>
+<li>Added a Breakpoints window for viewing all breakpoints in the project</li>
+<li>Added an error message when a SCC plugin could not be initialized</li>
+<li>Added Help menu option to go to support information</li>
+<li>Improved the performance of removing tabs from large files<li>
+<li>Changed breakpoints to be stored in the .deuser file rather than the .deproj file</li>
+<li>Changed the "Add New File" dialog to use source control's local path as the default if the project has not yet been saved</li>
+<li>Changed the Find/Replace dialog to update when Ctrl-F/Ctrl-H is pressed with text selected in the editor</li>
+<li>Changed Debug menu accelerators to be consistent with Microsoft Visual Studio</li>
+<li>Fixed compatibility with SCC plugins that don't allow multi-threaded access (fixes Perforce SCC)</li>
+<li>Fixed compatibility with applications where the lua_newstate function was optimized away by the compiler (uses luaL_newstate instead)</li>
+<li>Fixed issue where the output of luac could not always be clicked on in the output window to go to the correct line</li>
+<li>Fixed bug where Decoda would hang when debugging applications that were not loaded at the default load address (fixes problems with 64-bit Vista)</li>
+<li>Fixed bug where Decoda did not call SccCloseProject on SCC plugins</li>
+<li>Fixed bug where symbols were not properly parsed from files when there was no project loaded</li>
+<li>Fixed bug where breakpoints would move the previous line when a file was closed and then opened again</li>
+<li>Fixed bug where an application being debugged would hang if Decoda was closed while at a breakpoint</li>
+<li>Fixed occasional crash or hang in the debugee when detaching the Decoda debugger</li>
+<li>Fixed bug where breakpoints were not always properly moved when inserting or deleting lines of text</li>
+<li>Fixed bug where breakpoints inserted in an edited file during debugging could become hidden, unremovable or otherwise out sync with the modified file</li>
+<li>Fixed bug where a SCC plugin could crash Decoda on shutdown</li>
+<li>Fixed crash bug if the user canceled selecting a source control project in the Project Settings window</li>
+<li>Fixed bug where the source control status for a file was not updated in the project when it was added using Project/Add Existing File<li>
+<li>Fixed bug where the auto-updater would sometimes append bogus data to the files that were updated</li>
+<li>Fixed bug where the "Go To Line" dialog locates the cursor after the selected line</li>
+<li>Fixed bug where double-clicking a line in search output locates cursor after the line listed</li>
+<li>Fixed bug where a file automatically loaded during debugging could be "undone" so there was no text in the file</li>
+<li>Fixed bug where closing an open file that had changes without saving would not properly undo modifications to the line mapping and breakpoints</li>
+<li>Fixed bug where inserting a new line at the beginning of a line wouldn't properly move breakpoints down with the line<li>
+<li>Fixed bug where the line number displayed in the call stack window was off by one</li>
+<li>Fixed bug where the line numbers in the Call Stack window didn't reflect any modifications to files made during a debugging session</li>
+<li>Fixed bug where the current line marker would disappear after closing and then opening the file where execution had stopped</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1029</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.11 (Build 1029)</b></p>
+<br/>
+<ul>
+<li>Added auto completion</li>
+<li>Added filtering option on the Project Explorer Window to only display certain types of files</li>
+<li>Fixed bug where the user would be prompted to save the current file multiple times when exiting the application</li>
+<li>Fixed issues when dealing with versions of source files that differ from the ones loaded into Lua</li>
+<li>Fixed crash when editing a script file during debugging</li>
+<li>Fixed bug where the source control status in the Project Explorer window was not updated when a read-only file was checked out by attempting to edit it</li>
+<li>Fixed bug where the using the Lua 5.1.4 binary DLLs would not display the source code (could happen with other applications where luaL_loadfile could not be intercepted</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1028</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.10 (Build 1028)</b></p>
+<br/>
+<ul>
+<li>Added invoking a __towatch metamethod on userdata (if there is one) to allow displaying of members -- see documentation for details</li>
+<li>Added invoking the __tostring metamethod on userdata (if there is one) to display the value in the watch window</li>
+<li>Added display of types in the Watch window</li>
+<li>Added feature where dragging an executable file into Decoda creates a new project for debugging that application</li>
+<li>Fixed bug where expressions were not properly evaluated in the Watch window when execution was stopped due to an exception</li>
+<li>Fixed bug where SCC plugins with names longer than 30 characters would not be displayed in the selection list</li>
+<li>Fixed bug where the default hotkey for Edit/Delete was set to D instead of Del</li>
+<li>Fixed UI errors in Windows Vista</li>
+<li>Fixed bug where the auto-updater didn't properly work on Windows Vista</li>
+<li>Fixed crash when scanning for a Lua signature in some applications</li>
+<li>Fixed crash bug when there are multiple instances of the Lua API that are accessed in a different order than they are initially encountered (Fixes Wireshark)</li>
+<li>Fixed crash when an application being debugged loaded a source file with 0 length</li>
+<li>Fixed occasional deadlock when stopping a debugging session</li>
+<li>Fixed occasional crash while debugging</li>
+<li>Fixed crash when attempting to emulate lua_pushthread on a modified version of Lua 5.0</li>
+<li>Fixed bug where lua_pushthread could not be emulated if Lua was compiled with 1 byte boundary alignment for structures</li>
+<li>Fixed crash bug when adding an external tool without specifying a title</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1026</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.09 (Build 1026)</b></p>
+<br/>
+<ul>
+<li>Added support for LuaJIT (just-in-time compilation is automatically disabled when the debugger is in use)</li>
+<li>Improved evaluation and display of values and expressions when hovering over them in the code editor</li>
+<li>Added auto-indentation so that the next line will have the same indentation as the current line</li>
+<li>Added an information pane in the Project Explorer window to show the full file name of the currently selected item</li>
+<li>Fixed occasional deadlock when the application being debugged called LoadLibrary was called while a DLL was being loaded</li>
+<li>Fixed bug where changing the Windows DPI would cause some dialogs to be displayed incorrectly</li>
+<li>Added icons to the call stack and virtual machines windows to show the current point of execution and the context in which the watch values are being evaluated</li>
+<li>Fixed bug where selecting Close All Documents would not remove temporary files from the project</li>
+<li>Fixed bug where selecting No in the Close All Documents dialog would cancel the operation instead of closing the files</li>
+<li>Added Cut, Copy, Paste, Delete and Select All options to the Edit menu to allow them to be hotkeyed</li>
+<li>Fixed bug where opening a file in the current instance would not restore the window if it was minimized</li>
+<li>Fixed bug where the first call to luaL_loadbuffer would load the script twice in some instances<li>
+<li>Fixed bug where nested for loops would not execute properly if there were expressions in the watch window<li>
+<li>Improved display of multi-byte character strings in the watch window</li>
+<li>Fixed memory overwrite when evaluating some multi-byte character strings in the watch window</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1025</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.08 (Build 1025)</b></p>
+<br/>
+<ul>
+<li>Fixed crashing bug when the application being debugged passed NULL in for the chunk name when calling lua_load</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1024</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.07 (Build 1024)</b></p>
+<br/>
+<ul>
+<li>Added option to automatically load the last project on startup (under Tools/Settings/Editor)</li>
+<li>Fixed bug where calling lua_pcall with no error handler would cause problems with some implementations of Lua</li>
+<li>Fixed bug where local variables and up values with nil values that shadowed global variables were not properly displayed in the watch window</li>
+<li>Fixed issues when using split views in the editor</li>
+<li>Fixed issue where the debugger window was not brought to the foreground when a breakpoint or exception was hit</li>
+<li>Changed Find in Files dialog to start out with the text selected</li>
+<li>Added saving of Find in Files search text history</li>
+<li>Fixed crash bug when calling lua_load with two identical chunk names, one of which was preceded by a @ symbol</li>
+<li>Fixed bug where strings enclosed in single quotes were not properly syntax colored</li>
+<li>Fixed crash bug when adding new lines at the end of a file during a debugging session</li>
+<li>Fixed issue where implementations of Lua that redefined lua_Number would not display numbers properly in the Watch window</li>
+<li>Fixed issue where multiple scripts with the same file name (but in different directories) would not be displayed separately in the project during a debugging session</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1023</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.06 (Build 1023)</b></p>
+<br/>
+<ul>
+<li>Fixed bug where up values for functions were not displayed in the watch window</li>
+<li>Fixed bug where meta methods on the global table that invoked the error function could cause deadlocks in the watch window</li>
+<li>Fixed bug where watches could be evaluated in VMs that had been destroyed</li>
+<li>Statements can now be evaluated in the watch window</li>
+<li>Fixed crash bug when using decoda.output with an implementation of Lua linked with the stdcall calling convention</li>
+<li>Changed new project files to be opened in the editor when they are added</li>
+<li>Added prompt when creating a new file with the same name as an existing file</li>
+<li>Fixed crash bug where VMs for Lua coroutines would not be removed from the the VM list</li>
+<li>Fixed bug where "VM destroyed" message was sometimes displayed multiple times when a single VM was destroyed</li>
+<li>The previous window position is now restored when starting up Decoda</li>
+<li>Fixed bug where files that are automatically loaded during a debugging session did not default to the appropriate directory when the user tried to save them</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1022</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.05 (Build 1022)</b></p>
+<br/>
+<ul>
+<li>Changed the watch window to evaluate expressions in the context of the currently selected stack level (rather than the union of all of them)</li>
+<li>Added displaying of expression lists in the watch window (can come from functions that return multiple values)</li>
+<li>Fixed bug where pressing return in the watch window on some keyboards didn't work properly</li>
+<li>Fixed bug where the first level of the call stack was not displayed as selected when hitting a breakpoint</li>
+<li>Fixed crash in applications that link with Lua 5.0 using the cdecl calling convention</li>
+<li>Changed the backend to look for a PDB file with the same base name if the symbols for a module could not be loaded with the name specified in the CodeView data</li>
+<li>Fixed bug where the handles to the executable module files were not properly closed when the debugging session ended</li>
+<li>Fixed bug where error messages from evaluating watch expressions were incorrectly displayed in some Lua linking configurations</li>
+<li>Fixed bug where the user supplied error handler to lua_pcall was no always invoked when an error occurred</li>
+<li>Changed the watch window to use the type name rather than the type constant value to improve compatibility with modified versions of Lua</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1021</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.04 (Build 1021)</b></p>
+<br/>
+<ul>
+<li>Fixed compatibility with MFC applications</li>
+<li>Fixed compatibility with applications that incorrectly return a chunk size of 0 from a lua_Reader to signal the end of the data</li>
+<li>Changed all temporary scripts loaded during the debugging process to be displayed with Lua syntax highlighting regardless of their extension</li>
+<li>Fixed issue where decoda_name would trigger an undeclared variable access when using strict.lua</li>
+<li>Fixed crash bug when displaying tables that contained references to themselves in the watch window</li>
+<li>Fixed bug where some items (tail calls, C functions) were displayed as blanks on the call stack</li>
+<li>Fixed bug where tables that contain userdata values were displayed improperly in the watch window</li>
+<li>Changed find In files dialog to default with the currently selected text</li>
+<li>Changed the watch window to automatically select the next item when editing or deleting an item</li>
+<li>Fixed bug where typing a number or symbol in the watch window wouldn't begin editing of the item</li>
+<li>Fixed bug where resizing the watch window would cause all of the items to be unnecessarily updated</li>
+<li>Fixed bug where non-Lua files were parsed as Lua for the Project Explorer window</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1020</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.03 (Build 1020)</b></p>
+<br/>
+<ul>
+<li>Fixed debugging Dawn of War</li>
+<li>Fixed compatibility with Lua 5.0</li>
+<li>Fixed compatibility with code compiled with the Intel Optimizing Compiler</li>
+<li>Fixed crash when the Lua functions had subroutine calls in the prolog code</li>
+<li>Fixed deadlock when there was an error loading a script</li>
+<li>Fixed bug where the project explorer window would draw incorrectly when opening the context menu</li>
+<li>Fixed bug where the short form of the file name would sometimes by displayed when opening a file by double clicking on it in Explorer</li>
+<li>Reduced redraw flickering in the Project Explorer window</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1019</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.02 (Build 1019)</b></p>
+<br/>
+<ul>
+<li>Fixed bug where tables that contained functions were not displayed properly in the expanded Watch window view</li>
+<li>Fixed bug where the auto-updater would fail under Vista Standard accounts (now prompts to Administrator access)</li>
+<li>Fixed bug where the user would not be prompted to save a file when closing it via the Window/Close menu option</li>
+<li>Fixed bug where files could not be opened by dragging them onto the window when a document was open</li>
+<li>Fixed bug where the status icon for new files would not be updated when they were added to source control</li>
+<li>Added support for displaying LuaPlus' wide-character strings in the Watch window</li>
+<li>Added support for displaying wide-character strings stored as normal Lua strings and strings that contain embedded zeros in the Watch window</li>
+<li>Added window list to the notebook tab bar</li>
+<li>Added middle click for closing a notebook tab</li>
+<li>Added a context menu when right clicking on a notebook tab with access to save, close and source control options</li>
+<li>Added support for searching multiple file types in the Find in Files dialog</li>
+<li>Pressing enter in the quick watch dialog now re-evaluates the expression</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1018</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.01 (Build 1018)</b></p>
+<br/>
+<ul>
+<li>Fixed deadlock when starting a new debugging session with values in the Watch window after a debugging session had already been run</li>
+<li>Fixed bug where the Watch window was not updated when a debugging session ended</li>
+<li>Changed display of strings in the Watch window to handle embedded zeros. The Watch window also now attempts to convert strings to UTF8 for display</li>
+<li>Improved error reporting when the file associations could not be updated on limited access acounts</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1017</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 (Build 1017)</b></p>
+<br/>
+<ul>
+<li>Updated documentation for first public release</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1016</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 (Build 1016)</b></p>
+<br/>
+<ul>
+<li>Fixed bug where the Lua stack would become corrupt if lua_loadbuffer was called with a NULL buffer (fixes issue with Garry's Mod)</li>
+<li>Added Lua API to output messages and change the name of the virtual machine displayed in the debugger (decoda_name, decoda_output)</li>
+<li>Added error message when attempting to debug a process that has already been debug once or is currently being debugged</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1015</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1015)</b></p>
+<br/>
+<ul>
+<li>Fixed deadlock when attaching to a process that contains breakpoints in a script currently being executed</li>
+<li>Fixed crash when breaking execution with a call stack with non-Lua functions</li>
+<li>Dragging and dropping deproj files onto Decoda now opens the project</li>
+<li>Fixed bug where Lua functions were not hooked in some cases when attaching the debugger to a running process</li>
+<li>Fixed deadlock when attaching to a process that generated a large number of error messages</li>
+<li>Changed the attach to process dialog to automatically scroll to show the process matching the project settings</li>
+<li>Set the debugger to use the project settings symbol path when attaching to a process</li>
+<li>Changed find operation to loop past the end of the file</li>
+<li>Added Find Previous menu option</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1014</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1014)</b></p>
+<br/>
+<ul>
+<li>Added support for applications that load DLLs via LoadLibraryEx</li>
+<li>Improved the reliability of Lua function dectection</li>
+<li>Fixed bug where Lua functions were not hooked properly if the Lua DLL was not loaded at its preferred address (fixes Garry's Mod 2007)</li>
+<li>Fixed crash bug if there was an error when querying the size of a module</li>
+<li>Fixed crash bug if an exception occurs in a Lua script by there is no error message</li>
+<li>Added a warning when lua_call and lua_pcall are called with too few values on the stack</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1013</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1013)</b></p>
+<br/>
+<ul>
+<li>Fixed bug where a file's line numbers would get off if it was modified during debugging</li>
+<li>Added time trial registration key entering screens</li>
+<li>Added a warning when one of the necessary Lua functions couldn't be found</li>
+<li>Fixed bug where the auto-updater would fail if some of the files couldn't be overwritten during update installation</li>
+<li>Changed auto-updater to overwrite read-only files during update installation</li>
+<li>Fixed bug where the syntax coloring for a file was not updated when it was saved with a different extension</li>
+<li>Fixed bug where the file name on the tab is not updated properly when the file is saved</li>
+<li>Fixed bug where two files with the same name (but different extensions) couldn't be opened at the same time</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1012</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1012)</b></p>
+<br/>
+<ul>
+<li>Optimized clean-up of project temporary files at the end of a debugging session</li>
+<li>Added a project setting to specify where the debugger looks for symbol (PDB) files</li>
+<li>Added /debugexe option to initiate debugging of an application from the command line</li>
+<li>Added a setting to adjust the color of selected text</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1011</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1011)</b></p>
+<br/>
+<ul>
+<li>Optimized application performance when debugging</li>
+<li>Improved the ability for the debugger to capture the source code for a script if the debugger was attached after the script was loaded</li>
+<li>Fixed bug where Lua functions hooked with up values could be hooked more than once</li>
+<li>Added detection of compiled binary script files</li>
+<li>Added hooking of luaL_loadbuffer to handle cases where lua_load gets inlined (fixes file loading in Adobe Lightroom)</li>
+<li>Changed the executable name and working directory fields in the project settings dialog to default to the current value when you browse</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1010</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1010)</b></p>
+<br/>
+<ul>
+<li>Added support for applications that have multiple versions of the Lua functions (fixes Garry's Mod)</li>
+<li>Added an option to ignore exceptions after the first time they're encountered</li>
+<li>Scripts loaded after the debugger is attached but before any Lua code was executed are now properly displayed in the debugger</li>
+<li>Removed debugging messages printed to the MSVC output window for the debugee process</li>
+<li>Fixed rare multi-threaded crash bug when ending a debugging session</li>
+<li>Fixed bug where the state of the debugger displayed in the window caption was not updated properly sometimes</li>
+<li>Fixed bug where the same Lua function could be hooked multiple times causing corruption of the original function</li>
+<li>Fixed bug where error handler was not properly preserved when intercepting lua_pcall functions</li>
+<li>Fixed bug where calls to lua_sethook by the application being debugged would interfere with the debugger (lua_sethook calls are currently ignored)</li>
+<li>Optimized debugging performance when there are a large number of virtual machines</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1009</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1009)</b></p>
+<br/>
+<ul>
+<li>Fixed bug where the current line indicator was not cleared when the debugging session ended</li>
+<li>Fixed bug where the user could delete temporary files from the Project Explorer and have no way to recover them</li>
+<li>Changed the attach to process dialog to automatically select the current project's executable if it's running</li>
+<li>Fixed bug where 9's were not treated as digits by the tokenizer, causing errors when display results in the Watch window</li>
+<li>Fixed bug typing a single character expression in the Watch window would fail</li>
+<li>Added functionality to clear the mouse cursor restrictions when a breakpoint is hit to make games easier</li>
+<li>Fixed bug where detaching from the process being debugged while at an exception would cause the process to hang forever</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1008</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1008)</b></p>
+<br/>
+<ul>
+<li>Added functionality to attach the debugger to a running process</li>
+<li>Double clicking on warnings or errors in the output window (or pressing F1) now opens the appropriate help topic</li>
+<li>Added setting up of file associations in the installer</li>
+<li>Fixed bug where the uninstaller wouldn't remove all of the registry keys or settings files</li>
+<li>Fixed bug where exiting Decoda while at a breakpoint would cause the application being debugged to deadlock</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1007</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1007)</b></p>
+<br/>
+<ul>
+<li>Fixed bug where script names like "DATA:filename" would be improperly translated into network names causing slow behavior when attempting to access the file</li>
+<li>Fixed bug where project files would not be linked with files loaded from script if the case of the file names were different</li>
+<li>Fixed bug where files that don't have a corresponding file on disk (like those loaded via luaL_loadstring) are read only in the editor</li>
+<li>Fixed bug where files automatically added to the project during debugging that didn't have proper file names could not be saved</li>
+<li>Changed external tools to save all modified files before running</li>
+<li>Fixed bug where deleting multiple files in the Project Explorer window would only delete the first file</li>
+<li>Fixed bug where pressing delete and then up arrow in the Watch window would cause a crash</li>
+<li>Changed the Watch window so that pressing backspace deletes the selected item</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1006</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1006)</b></p>
+<br/>
+<ul>
+<li>Fixed crash Project Explorer window when using the filter after files were removed from the project</li>
+<li>Added output of a detailed error message when a process could not be started</li>
+<li>Disabled New and Open Project menu items while the debugger is running</li>
+<li>Fixed bug where files automatically added during debugging or added to the project via the menu were not parsed for symbols in the Project Explorer window</li>
+<li>Fixed bug where symbols of a file were not all removed from the Project Explorer window when a file was removed from the project (would cause a crash if you clicked on them)</li>
+<li>Added a warning message if the application did not destroy all of the virtual machines</li>
+<li>Added a warning message if the Lua functions were not found during the debugging session</li>
+</ul>
+]]>
+</desc>
+</build>
+
+<build>
+    <version>1005</version>
+	<desc>
+<![CDATA[<p><b>Decoda 1.0 Beta (Build 1005)</b></p>
+<br/>
+<ul>
+<li>Fixed memory leak when opening a new project while a project was currently open</li>
+<li>Fixed crash when closing the application while the Project Explorer was parsing symbols</li>
+<li>Fixed bug where debugging a console application that statically linked with Lua 5.0 would give an error message and not start (may have occurred in other cases as well)</li>
+<li>Fixed bug where an extra VM would appear in the VM list under certain circumstances, and crash if you clicked on it</li>
+<li>Fixed support for Lua 4.0 (Dawn of War is currently broken due to a modified lua_open function)</li>
+<li>Added "Start Without Debugging" menu option</li>
+<li>Added documentation on warnings output during debugging</li>
+</ul>
+]]>
+</desc>
+</build>
+
+</builds>
+
+<patches>
+
+	<patch>
+		<src_version>1031</src_version>
+		<dst_version>1032</dst_version>
+	    <file>download.php?file=decoda_1031_to_1032.patch</file>
+		<size>1908591</size>
+	</patch>
+	<patch>
+		<src_version>1032</src_version>
+		<dst_version>1033</dst_version>
+	    <file>download.php?file=decoda_1032_to_1033.patch</file>
+		<size>1174385</size>
+	</patch>	
+	<patch>
+		<src_version>1033</src_version>
+		<dst_version>1034</dst_version>
+	    <file>download.php?file=decoda_1033_to_1034.patch</file>
+		<size>1218522</size>
+	</patch>
+	
+</patches>

@@ -1,0 +1,657 @@
+\documentstyle[a4,makeidx,verbatim,texhelp,fancyhea,mysober,mytitle]{report}%
+\usepackage{url}
+\date{March 2009}
+\parskip=10pt%
+\parindent=0pt%
+\title{Decoda}%
+\makeindex%
+\begin{document}%
+\maketitle%
+\pagestyle{fancyplain}%
+\bibliographystyle{plain}%
+\pagenumbering{roman}%
+\setheader{{\it CONTENTS}}{}{}{}{}{{\it CONTENTS}}%
+\setfooter{\thepage}{}{}{}{}{\thepage}%
+\tableofcontents%
+
+\chapter{Introduction}\label{intro}
+\pagenumbering{arabic}%
+\setheader{{\it CHAPTER \thechapter}}{}{}{}{}{{\it CHAPTER \thechapter}}%
+\setfooter{\thepage}{}{}{}{}{\thepage}%
+
+Decoda is a professional development environment for debugging Lua script in your applications. It's familiar and fast and you'll wonder how you ever worked without it.
+\index{licensing}
+\index{support}
+\index{Features}
+
+\textbf{Features}
+\begin{itemize}
+\item Full graphical IDE. Syntax highlighting, symbol browsing/filtering, configurable hotkeys and colors, custom tools and more. If you know MSVC, you'll be comfortable immediately (F5 to run, F9 for breakpoints, etc).
+\item Plays well with others. Integrates with your source control (SCC) and is simple enough for the un-nerdly. It even attaches to MSVC for debugging your native code.
+\item Plug and play. It requires no code changes and supports Lua 4.0 and later. It supports the latest and greatest games and will work with your creation too.
+\end{itemize}
+
+Decoda is Copyright (c) 2007-2011, Unknown Worlds Entertainment, Inc.
+
+\chapter{Getting Started}\label{getting_started}
+\index{breakpoints}
+
+\textbf{Quick start}
+\begin{itemize}
+\item Add all your Lua files (Project -> Add Existing File). Shift-select all your files and press Open.
+\item Point Decoda at your .exe (Project -> Settings). Enter your project's .exe, command-line arguments (windowed mode if needed) and the working directory and press OK.
+\item Save your project (Project -> Save Project As).
+\item Press Control-Q to jump to the Project Explorer and type the name of a class to jump to, or browse to it via the tree view on the left. Press F9 to set a breakpoint somewhere.
+\item Press F5 to run. Your application should start and hit your breakpoint. If you get warnings in the output window, see our \helpref{Warnings section}{warnings}.
+\end{itemize}
+
+\textbf{Other notes}
+\begin{itemize}
+\item Decoda is designed to work just like the debugger in Microsoft Visual Studio. F9 to set breakpoints, F5 to run, F10 to step over, F11 to step in, etc.  
+\item If you don't have the Lua source files (ie, you're debugging a commercial application that uses Lua), Decoda will still show you code and symbols it loads.
+\item Follow \helpref{these steps}{source_control} to integrate Decoda with your source control (SCC).
+\end{itemize}
+
+\chapter{Registering}\label{registering}
+
+\textbf{30-Day Evaluation License}
+
+Any individual person is entitled to use Decoda for 30 days for the purposes of
+evaluating the software. This 30-day period starts on the day that the user first
+installs the product and ends 30 days thereafter.
+
+When the 30 days has lapsed, Decoda will cease functioning. If the user wishes
+to continue using Decoda past this date, the user will have to register his or her copy.
+
+\textbf{Registration License}
+
+Decoda is licensed on a per-user basis.  Each individual person who uses Decoda
+beyond the 30-day evaluation period will need his or her own license.
+
+If the user uses more than one PC, he or she only requires a single license. If two or
+more users share a PC, each user will require his or her own license.
+
+\textbf{Pricing}
+
+Please visit the Decoda web site for the latest pricing information, at
+\urlref{http://www.unknownworlds.com/decoda}{http://www.unknownworlds.com/decoda}. 
+
+\textbf{How to Register}
+
+You first need to obtain a registration key. Details on obtaining the key can be found
+at \urlref{http://www.unknownworlds.com/decoda}{http://www.unknownworlds.com/decoda}.
+Once you have obtained a key, enter it in the start up screen.  The key can also be
+entered while the application is running by selecting Help/Register from the menu. 
+
+\chapter{Debugging}\label{debugging}
+
+\textbf{Interface tips}
+\begin{itemize}
+\item Select a variable and drag it to the Watch window or type in something more specific.
+\item You can debug your native code by checking the Attach to System Debugger option and then pressing F5.
+\item Double-click in the Call Stack window while debugging to see your code context.
+\end{itemize}
+
+\section{Debugging a New Process}\label{debugging_new}
+
+The Debug/Start menu option initiates debugging of a new process.  Settings for the debugging
+session, such as the executable to run, are configured in the project settings. If the project
+settings have not been configured when starting a debugging session, the Project Settings dialog
+will automatically be displayed. See the section on \helprefn{Project Settings}{project_settings}
+for more information.
+
+Once the debugging session begins, the application should start and messages will be printed to
+the Output window. The output during a typical debugging session will look something like this:
+
+{\verbatim Debugging session started
+Debugger attached to process
+0x00150fd0: VM created
+... }
+
+The message "Debugger attached to process" indicates that the debugger has finished its
+initialization and is ready to debug. Initialization is not finalized until the application being
+debugged begins to access the Lua API, so they message may not be display right away.
+
+If you don't see this message during a debugging session, check for warnings that may have been
+printed to the output window.  Consult the section on \helprefn{warnings}{warnings} for further
+assistance.
+
+\section{Attaching to a Running Process}\label{attaching_debugger}
+
+Decoda can debug a process that is already running by using the Debug/Processes... menu option.
+Selecting this option will display a list of all the processes currently running on the system.
+Clicking on a process and pressing the Attach button will.
+
+Note, the debugger cannot be attached to a process that is currently or has at any point during
+its lifetime been debugged by Decoda. This means that if you debug a process, detach from it, and
+then attempt to reattach to the process it will fail.
+
+Due to the nature of Decoda's interaction with Lua, there are some limitations when attaching to a
+running process.  Specifically, the debugger will not have full information on events that occurred
+before it was attached to the process.  These events include the creation of virtual machines or
+the loading of scripts.
+
+When attaching to a running process, Decoda will use the symbol directory specified in the current
+project settings to search for PDB files. See the section on \helprefn{Project Settings}{project_settings}
+for more information.
+
+\section{Displaying userdata in the Watch window}\label{watch}
+\index{userdata}
+\index{__towatch}
+\index{__tostring}
+
+By default, Decoda does not have enough information about userdata values to display detailed information
+in the Watch window.  Your application can alter this behavior by supplying additional hooks using either the 
+__towatch or __tostring metamethods.
+
+To display the value of a userdata in the Watch window, Decoda will first try to invoke the __towatch method
+on the userdata's metatable. This method will be invoked with the userdata as a parameter and should return a
+value to be used in place of the userdata in the Watch window.  The most common use is to return a table which
+contains keys and values for the member elements of the userdata.
+
+The example code below shows how a __towatch function may be written for a simple Point structure.
+
+{\verbatim struct Point
+\{
+	float x;
+	float y;
+\};
+
+int PointToWatch(lua_State* L)
+\{
+
+	const Point* point = (const Point*)(lua_touserdata(L, 1));
+
+	lua_newtable(L);
+	int table = lua_gettop(L);
+	
+	lua_pushstring(L, "x");
+	lua_pushnumber(L, point->x);
+	lua_settable(L, table);
+
+	lua_pushstring(L, "y");
+	lua_pushnumber(L, point->y);
+	lua_settable(L, table);
+	
+	return 1;
+	
+\} }
+
+
+If the userdata does not have a metatable, or the table does not contain a __towatch method, Decoda will try
+to use the __tostring metamethod to get a textual description of the userdata.  This method will be invoked
+with the userdata as a parameter and should return a string description of the object.  More information about
+__tostring can be found in the Lua documentation.
+
+\section{Using a Modified Version of Lua}\label{modified_lua}
+
+Decoda utilizes the Lua implementation of the application being debugged and therefore can work with modified
+versions of Lua. The only restriction is that the modified version must retain the original Lua API functions.
+Decoda expects functions to have the same prototype as in the original API and generally behave similarly (have
+the same return values and side effects).
+
+If you wish to modify the Lua API and still maintain compatibility with Decoda, the correct way is to create
+functions with new names that utilize the original API functions.
+
+\textbf{Example:}
+
+{\verbatim int luaL_newmetatablewithtype(lua_State *L, const char *tname, int type) \{
+  
+    int result = luaL_newmetatable(L, tname);
+
+    lua_pushnumber(L, type);
+    lua_setfield(L, -2, "Type");
+
+    return result;
+
+\} }
+
+In this example, where ever you were using luaL_newmetatable call this new luaL_newmetatablewithtype.
+
+\section{Simultaneously Debugging C/C++ and Lua}
+
+A normal C/C++ debugger such as Microsoft Visual Studio can be used alongside Decoda to
+provide complete debugging of an application.
+
+This can be accomplished by debugging a new process (see \helprefn{Debugging a New Process}{debugging_new})
+from Decoda and then using the C/C++ debugger to attach to the running process.  Conversely, the process can
+be started from inside the C/C++ debugger and then attached from Decoda (see
+\helprefn{Attaching to a Running Process}{attaching_debugger}).
+
+If the Debug/Attach to System Debugger menu option is checked, Decoda will automatically invoke the system
+debugger whenever a new process is started. The system debugger is specified in the Windows registry and will
+typically be set to Microsoft Visual Studio if it is installed on the machine. This mechanism provides a shortcut
+for attaching both a C/C++ debugger and Decoda to an application simultaneously.
+
+\chapter{User Interface}\label{user_interface}
+\pagenumbering{arabic}%
+\setheader{{\it CHAPTER \thechapter}}{}{}{}{}{{\it CHAPTER \thechapter}}%
+\setfooter{\thepage}{}{}{}{}{\thepage}%
+
+\textbf{Tips}
+\begin{itemize}
+\item Press Control-Q and type a class or function name to find it quickly.
+\item By default, Decoda acts like MSVC (F5 to debug, F9 to toggle breakpoints, etc.)
+\item You can customize your IDE colors (Tools -> Settings).
+\item Add a Lua compiler to your Tools menu to quickly check for errors.
+\end{itemize}
+
+\section{Project Settings}\label{project_settings}
+
+The Project Settings dialog is accessed from the Project/Settings menu and is used to
+setup information about the application being debugged.
+
+\textbf{Debugging Options}
+
+\begin{twocollist}
+\twocolitemruled{{\bf Field}}{{\bf Description}}
+\twocolitem{ Command }{ The full path to the executable file that will be launched with the debugging session }
+\twocolitem{ Command Arguments }{ Any command line arguments that will be passed to the application }
+\twocolitem{ Working Directory }{ The default directory for the process being debugged. If this field is left blank the executable's directory is used as the working directory. }
+\twocolitem{ Symbols Directory }{ The directory to search for PDB files. Multiple directories separated by semi-colons can also be specified. }
+\end{twocollist}
+
+\textbf{Source Control Options}
+
+The source control fields in the Project Settings dialog always you to setup your project
+to connect to an existing source control project.  The Source Control Provider field lists
+the registered SCC plugins installed on the computer, and the Project field lets you connect
+to a source control project.
+
+The exact user interface provided by the source control system is dependent on the SCC plugin
+that is being used. Please check your SCC plugin documentation for more information.
+
+More information about source control integration can be found in the section on \helprefn{Source Control}{source_control}.
+
+\section{Virtual Machines}\label{virtual_machines}
+
+Virtual machines correspond to lua_State objects and are created when lua_newstate
+or other similar functions -- such as lua_open and luaL_newstate -- are called.  All of the virtual
+machines that currently exist in the program being debugged are shown the Virtual Machines
+window.
+
+By default, virtual machines are identified in the UI by their address, however they
+can be named via the Decoda \helprefn{API}{decoda_name} for additional clarity.
+
+Selecting a VM updates the watch window
+
+\section{Project Explorer}\label{project_explorer}
+
+\index{Project Explorer}
+
+The Project Explorer window is used to browse the files, functions and classes in
+the current project.
+
+During a debugging session, any scripts loaded by the debugee will automatically
+be added to the Project Explorer window if they aren't already in the project. These
+files are Temporary files are indicated by a faint "ghost file" icon and will be removed
+when the debugging session ends.  If the files are open in the editor at the end of the
+debugging session they'll be removed from the Project Explorer when they're closed.
+
+Items displayed in the Project Explorer can be filtered by entering text in the box
+at the top of the window. Only files and symbols that begin with the specified text
+string will be displayed. Adding a space to the beginning of your filter will
+shows symbols that contain the text \em{anywhere} in the name.  The input focus
+can be moved to the Project Explorer filter text box by using the Window/Open In Filter
+menu option. Using a hotkey with this menu item (Ctrl+Q by default) makes it very
+easy to rapidly locate functions and files using only the keyboard.
+
+ \image{5cm;0cm}{images/project_explorer_filter}
+
+The files and symbols in the Project Explorer can also be filtered by the properties
+of the files. This is accomplished by using the file filter drop down menu located next
+to the text box at the top of the window. The filter can be used to show or hide files
+that are Temporary, Unversioned, Checked In or Checked Out. Files that have any of the
+checked properties will be displayed in the Project Explorer window. So for instance,
+to hide the Temporary files added during the debugging session, uncheck the Temporary
+icon and leave the others checked.
+
+\section{Source Control}\label{source_control}
+\pagenumbering{arabic}%
+\setheader{{\it CHAPTER \thechapter}}{}{}{}{}{{\it CHAPTER \thechapter}}%
+\setfooter{\thepage}{}{}{}{}{\thepage}%
+
+\index{Source Control}
+\index{SCC}
+\index{Perforce}
+\index{CVS}
+\index{Subversion}
+\index{SVN}
+
+Decoda includes support for Microsoft SCC plugins.  SCC plugins are available for most popular
+source control systems including Microsoft Visual SourceSafe, Perforce, CVS and Subversion (SVN) and
+can be obtained from the vendor or other third parties.
+
+Decoda will automatically scan the Window's registry for SCC plugins, so no special steps are
+required beyond following the vendor's instructions for installing the plugin on your system.
+
+Source control functions are accessed through the SCC menu or by right clicking on items in the
+Project Explorer window.
+
+\section{External Tools}\label{external_tools}
+
+\index{External Tools}
+\index{\$(ItemPath)}
+\index{\$(ItemDir)}
+\index{\$(ItemFileName)}
+\index{\$(ItemExt)}
+
+The External Tools dialog enables you to customized the Tools menu with new items that
+invoke external applications.  An example use is to setup the Lua compiler (luac.exe) to
+parse the document you are editing to check for syntax errors.
+
+Macros can be inserted into the Arguments field to substitute information about the active
+document when the tools is invoked. The table below summarizes the available macros. 
+
+\begin{twocollist}
+\twocolitemruled{{\bf Macro}}{{\bf Description}}
+\twocolitem{ \$(ItemPath) }{ Complete directory, file name and extension. }
+\twocolitem{ \$(ItemDir) }{ Directory the file is in (no trailing backslash) }
+\twocolitem{ \$(ItemFileName) }{ Name of the file with no directory }
+\twocolitem{ \$(ItemExt) }{ File extension (no preceding period) }
+\end{twocollist}
+
+Like all of the menu items, items added through the External Tools dialog can be assigned to
+hot keys using the Key Bindings dialog.
+
+\section{System Settings}\label{system_settings}
+
+\begin{itemize}
+\item File associations allows you to select files that will be opened when double clicking
+on them in Windows explorer.
+\item Check for updates with automatically when the application starts. Checking for updates
+does not send any information (personal or otherwise).
+\end{itemize}
+
+\chapter{Command Line Switches}\label{command_line}
+\pagenumbering{arabic}%
+\setheader{{\it CHAPTER \thechapter}}{}{}{}{}{{\it CHAPTER \thechapter}}%
+\setfooter{\thepage}{}{}{}{}{\thepage}%
+
+\index{command line switches}
+\index{arguments}
+
+\begin{tabular}{|l|p{8.5cm}|}\hline
+\row{{\bf Command line switch}&{\bf Description}}\hline\hline
+\row{\helprefn{/debugexe}{debugexe} filename&Starts debugging of the specified executable file.}
+\end{tabular}
+
+Files can be specified on the command line.
+
+\section*{/debugexe filename}\label{debugexe}
+\index{/debugexe}
+
+Starts debugging of the specified executable file. If the file name contains spaces, it should
+be enclosed in quotes.
+
+\textbf{Example:}
+
+Decoda.exe /debugexe "c:$\backslash$Program Files$\backslash$Application$\backslash$Application.exe"
+
+If a project is also loaded on the command line and the executable image for the project
+matches the file specified with /debugexe, the working directory and arguments specified
+in the project will be used when launching the executable. Otherwise the directory of the
+executable will be used as the working directory and no command line arguments will be
+supplied.
+
+\chapter{Warnings}\label{warnings}
+
+This section describes warnings that may be written to the Output window while debugging. While
+warnings do not necessarily mean there is an error, they often point to unexpected behavior that
+may cause problems or unexpected behavior.
+
+\textbf{Warnings}
+
+\section{Warning 1000: Lua functions were not found during debugging session}\label{warning_1000}
+\index{Warning 1000}
+
+This warning is displayed when the debugger fails to locate the necessary Lua functions inside
+the main executable or any of the DLLs loaded during the debugging session. If the application
+statically links with Lua, this may indicate that the necessary PDB information could not be
+found by the debugger. This can also occur if the application is missing some of the necessary
+Lua functions or they have been renamed.
+
+This warning can also occur under normal circumstances if the application was terminated before
+it loaded the DLL containing the Lua functions.
+
+\section{Warning 1001: '...' appears to contain Lua functions however no Lua functions could located with the symbolic information}\label{warning_1001}
+\index{Warning 1001}
+
+This warning means that a module of the application being debugged contains a binary signature
+that indicates the presence of the Lua implementation.  The PDB for the module, however, was
+either missing or did not include information about the Lua functions.
+
+To address this problem, you may need to adjust the Symbol Directory in the
+\helprefn{Project Settings}{project_settings}.
+
+\section{Warning 1002: Symbol file '...' located but it does not match module '...'}\label{warning_1002}
+\index{Warning 1002}
+
+This warning means that during the process of debugging, a PDB which does not match the
+corresponding module was encountered. The most common cause of this problem is that the module
+is built in Release mode, while the PDB is for the Debug mode version of the code.
+
+If the named module contains the Lua implementation, then this warning may result in the debugger
+being unable to locate the necessary Lua functions. If this happens the debugger functions will
+not work properly.
+
+This warning may also be displayed if the format of the PDB prevents it from being loaded, either
+because it is an obsolete format or is not actually in the PDB format.
+
+\section{Warning 1003: Not all virtual machines were destroyed}\label{warning_1003}
+\index{Warning 1003}
+
+This warning means that the application being debugged created virtual machines that were not
+destroyed before the application exited. For example, if the application uses Lua 5.0, not all
+lua_newstate calls had corresponding lua_close calls.
+
+\section{Warning 1004: Couldn't hook Lua function '...'}\label{warning_1004}
+\index{Warning 1004}
+
+This warning means that during the hooking of Lua functions during the debugging process,
+the specified function was not found. This can be the result of the Lua function missing
+from the Lua implementation due to modifications, or because the symbolic information for
+that function is missing.
+
+This warning can also occur if the application being debugged statically links with Lua and is
+compiled with optimizations enabled. In this case, certain Lua functions that are not used
+may be removed by the compiler during the optimization phase.  One way to fix this problem is
+to add an explicit call the Lua function named in the warning and recompile the application.
+
+Alternatively, if you are using the Microsoft Visual C++ linker you can use the /OPT:NOREF
+option to prevent the linker from removing these functions.
+
+\section{Warning 1005: lua_call/lua_pcall called with too few arguments on the stack}\label{warning_1005}
+\index{Warning 1005}
+\index{lua_call}
+\index{lua_pcall}
+
+This warning indicates that the lua_call or lua_pcall Lua API function was called from C
+with fewer than the expected number of arguments on the Lua stack.  These functions both
+expect there to be one plus the number of arguments the function accepts on the stack.
+
+Please consult the Lua API documentation for more information.
+
+\section{Warning 1006: lua_pushthread could not be emulated due to modifications to Lua. Coroutines may be unstable}\label{warning_1006}
+\index{Warning 1006}
+\index{lua_pushthread}
+\index{coroutine}
+\index{thread}
+
+Decoda requires the lua_pushthread function to properly handle coroutines. This
+function was introduced in Lua 5.1 and doesn't exist in the Lua 5.0 API. To
+work around this, Decoda will attempt to emulate the functionality when debugging
+an application that uses Lua 5.0.
+
+This emulation can fail if the application is using a heavily modified version of
+Lua 5.0. To work around this, you can add an implementation of lua_pushthread to
+your Lua 5.0 code. To do this, add the following code to lapi.c:
+
+{\verbatim LUA_API int lua_pushthread (lua_State *L) \{
+  lua_lock(L);
+  setthvalue(L->top, L);
+  api_incr_top(L);
+  lua_unlock(L);
+  return (G(L)->mainthread == L);
+\}
+}
+
+If you do not supply an implementation of lua_pushthread and it cannot be emulated,
+the use of coroutines may cause Decoda to become unstable.
+
+\section{Warning 1007: Just-in-time compilation of Lua code disabled to allow debugging}\label{warning_1007}
+\index{Warning 1007}
+\index{LuaJIT}
+\index{JIT}
+\index{thread}
+
+The just-in-time compilation provided by LuaJIT is incompatible with the mechanisms that Decoda
+uses for debugging. In order to allow debugging, Decoda automatically disables just-in-time
+compilation for any Lua code that is loaded.
+
+This should have no side effects other than possibly causing your application to execute more slowly,
+since Lua code will be interpreted rather than compiled. This warning does not indicate a problem
+and can be safely ignored.
+
+\section{Warning 1008: No __tostring or __towatch metamethod was provided for userdata}\label{warning_1008}
+\index{Warning 1008}
+\index{__tostring}
+\index{__towatch}
+\index{userdata}
+
+A userdata value that was displayed in the Watch window did not have a __tostring or __towatch function
+in its metatable.  Without one of these functions Decoda is unable to provide detailed information about
+the value of the userdata. Please refer to \helprefn{this}{watch} article for more information.
+
+\section{Warning 1009: Enabling LuaJIT C call return work-around}\label{warning_1009}
+\index{Warning 1009}
+\index{__tostring}
+\index{__towatch}
+\index{userdata}
+
+LuaJIT version 2.0 does not call the debug hook callback with LUA_HOOKCALLRET when returning from a C
+function call. Normally Decoda uses this during debugging. If Decoda detects that LuaJIT 2.0 is being
+used a work-around is used. This warning does not indicate a problem and can be safely ignored.
+
+\chapter{API}\label{api}
+
+Decoda exposes an API through Lua that can be used to control aspects of the debugger. The API is
+implemented as a set of Lua functions that are automatically registered into your Lua states when
+they are created under the debugger.  The API can either be accessed directly from Lua or from C.
+
+The API won't exist if the debugger is not running, so it's important to check that the desired
+function exists before attempting to call it.  This example demonstrates how to call an API function
+from Lua:
+
+{\verbatim if decoda_output then decoda_output("Test") }
+
+The same function can be called from C like this:
+
+{\verbatim const char* message = "Test";
+lua_getglobal(L, "decoda_output");
+
+if (lua_isnil(L, -1))
+\{
+    lua_pop(L, 1);
+\}
+else
+\{
+    lua_pushstring(L, message);
+    lua_call(L, 1, 0);
+\}
+}
+
+\textbf{API Functions}
+
+\section{decoda_name}\label{decoda_name}
+
+Sets the name of the virtual machine displayed in the debugger. This is not a function, but
+a variable that should be set by the application being debugged to alter the name.
+
+\textbf{Example:}
+
+{\verbatim lua_pushstring(L, "Client VM");
+lua_setglobal(L, "decoda_name"); }
+
+\section{decoda_output(message)}\label{decoda_output}
+
+Writes a text message to the output window of the debugger.
+
+\textbf{Example:}
+
+{\verbatim const char* message = "This is a test message";
+lua_getglobal(L, "decoda_output");
+
+if (lua_isnil(L, -1))
+\{
+    lua_pop(L, 1);
+\}
+else
+\{
+    lua_pushstring(L, message);
+    lua_call(L, 1, 0);
+\}
+}
+
+\chapter{Contact}\label{contact}
+\index{contact}
+
+If you experience bugs or are having difficulty to getting your application
+to work with Decoda, feel free to contact us at our technical support e-mail
+address:
+
+\urlref{decoda@unknownworlds.com}{mailto:decoda@unknownworlds.com}
+
+Please provide details about your issue and the version number, which can be
+found in the Help/About dialog. We'll be happy to assist you with both the
+registered and unregistered versions of Decoda.
+
+\chapter{License Agreement}\label{license}
+
+You should carefully read the following terms and conditions before using Decoda.
+Unless you have a different license agreement signed by Unknown Worlds Entertainment,
+your use of this software indicates your acceptance of this license agreement and
+warranty. If you do not accept these terms you must cease using this software immediately.
+
+\textbf{Copyright}
+
+Decoda ("the Software") is copyright (c) 2007-2011 by Unknown Worlds Entertainment, Inc., all
+rights reserved.
+
+\textbf{Evaluation and Registration}
+
+This is not free software.  You are hereby licensed to use the Software for evaluation
+purposes without charge for a period of 30 days.  If you use the Software after the 30-day
+evaluation period a registration fee as described in the documentation is required.
+Unregistered use of the Software after the 30-day evaluation period is in violation of
+U.S. and international copyright laws.
+
+One registered copy of the Software may either be used by a single person who uses the
+software personally on one or more computers, or installed on a single computer used by
+multiple people, but not both.
+
+An organization may purchase a multi-user site license amounting to either the number of
+individuals who have access to the Software on any number of computers, or the number of
+computers that will access the Software by any number of individuals.  A site is defined
+as all company locations within a 100 mile radius. Site licenses do not cover subsidiary
+companies, or customers of a company.
+
+\textbf{Distribution}
+
+Provided that you do not include your License Key you are hereby licensed to make copies
+of the Software; give exact copies of the original to anyone; and distribute the Software
+in its unmodified form via electronic means.  You are specifically prohibited from charging
+for any such copies.
+
+\textbf{Governing Law}
+
+This agreement shall be governed by the laws of the State of California.
+
+\textbf{Disclaimer of Warranty}
+
+THIS SOFTWARE AND THE ACCOMPANYING FILES ARE SOLD "AS IS" AND WITHOUT WARRANTIES AS TO
+PERFORMANCE OR MERCHANTABILITY OR ANY OTHER WARRANTIES WHETHER EXPRESSED OR IMPLIED.  NO
+WARRANTY OF FITNESS FOR A PARTICULAR PURPOSE IS OFFERED.  ANY LIABILITY OF THE SELLER WILL
+BE LIMITED EXCLUSIVELY TO REFUND OF PURCHASE PRICE.
+
+\end{document}
