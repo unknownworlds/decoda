@@ -14,6 +14,7 @@ solution "Decoda"
 
 project "Frontend"
     kind "WindowedApp"
+	targetname "Decoda"
 	flags { "WinMain" }
     location "build"
     language "C++"
