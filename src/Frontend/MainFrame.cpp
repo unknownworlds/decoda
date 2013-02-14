@@ -5231,8 +5231,40 @@ void MainFrame::GetNotebookTabSelectedFileNames(std::vector<std::string>& fileNa
 
 void MainFrame::ReloadFile(OpenFile* file)
 {
-    file->edit->LoadFile(file->file->fileName.GetFullPath());
+
+    CodeEdit& editor = *file->edit;
+    int oldScrollPos = editor.GetScrollPos(wxVSCROLL);
+
+    //Disable modified events so OnCodeEditModified is not called
+    editor.SetModEventMask(0);
+
+    editor.LoadFile(file->file->fileName.GetFullPath());
     file->timeStamp = GetFileModifiedTime(file->file->fileName.GetFullPath());
+
+    editor.SetModEventMask(wxSCI_MODEVENTMASKALL);
+    
+    int newLineCount = editor.GetLineCount();
+    
+    std::vector<unsigned int>& breakpoints = file->file->breakpoints;
+    
+    //Erase breakpoints past the end of the file and re-add the markers for the rest
+    for (std::vector<unsigned int>::iterator it = breakpoints.begin(); it != breakpoints.end() ;)
+    {
+        if (*it >= newLineCount)
+        {
+          it = breakpoints.erase(it);
+        }
+        else
+        {
+          UpdateFileBreakpoint(file, *it, true);
+          it++;
+        }
+    }
+
+    m_breakpointsWindow->UpdateBreakpoints(file->file);
+
+    //Scroll the editor back to the same line we were before the reload
+    editor.ScrollToLine(oldScrollPos < newLineCount ? oldScrollPos : newLineCount);
 }
 
 void MainFrame::FindInFiles(const wxString& text, const wxArrayString& fileNames, bool matchCase, bool matchWholeWord, const wxString& baseDirectory)
