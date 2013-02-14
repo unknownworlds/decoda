@@ -67,7 +67,7 @@ std::string UrlEncode(const std::string& string)
  */
 void CrashCallback(void* address)
 {
-
+#ifndef NOUPDATER
     extern const unsigned int g_buildNumber;
 
     Report report;
@@ -86,12 +86,14 @@ void CrashCallback(void* address)
         report.Submit(serverAddress, NULL);
     
     }
-
+#endif
 }
 
 MainApp::MainApp()
 {
+#ifndef NOUPDATER
     CrashHandler::SetCallback( CrashCallback );
+#endif
 }
 
 bool MainApp::OnInit()
