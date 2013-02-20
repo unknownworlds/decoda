@@ -469,7 +469,7 @@ int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, co
 
 }
 
-unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
+int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
 {
 
     CriticalSectionLock lock(m_criticalSection);
@@ -706,7 +706,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         // Fill in the rest of the structure.
         lua_getinfo_dll(api, L, "Sl", ar);
         const char* arsource = GetSource(api, ar);
-        unsigned int scriptIndex = GetScriptIndex(arsource);
+        int scriptIndex = GetScriptIndex(arsource);
 
         bool stop = false;
 
@@ -799,7 +799,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
             else if (GetIsHookEventCall( api, arevent))  // only LUA_HOOKCALL for Lua 5.1 and before, can also be LUA_HOOKTAILCALL for newer versions
             {
                 // if we are running Lua > 5.1, LUA_HOOKRET won't be emitted after a LUA_HOOKTAILCALL, so simply ignore it in that case
-                if( arevent == LUA_HOOKCALL)
+            if( arevent == LUA_HOOKCALL)
                 {
                     ++vm->callCount;
                 }
@@ -824,7 +824,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
 }
 
-unsigned int DebugBackend::GetScriptIndex(const char* name) const
+int DebugBackend::GetScriptIndex(const char* name) const
 {
 
     NameToScriptMap::const_iterator iterator = m_nameToScript.find(name);
@@ -1619,7 +1619,7 @@ void DebugBackend::SetLocals(unsigned long api, lua_State* L, int stackLevel, in
 
         }
 
-    }
+    }              
 
 }
 
@@ -2040,7 +2040,7 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
         }
         if( node == NULL)
         {
-            node = GetTableAsText(api, L, -1, maxDepth - 1, typeNameOverride);
+        node = GetTableAsText(api, L, -1, maxDepth - 1, typeNameOverride);         
         }
         // Remove the duplicated value.
         lua_pop_dll(api, L, 1);
@@ -2051,7 +2051,7 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
         lua_Debug ar;
         lua_getinfo_dll(api, L, ">Sn", &ar);
 
-        unsigned int scriptIndex = GetScriptIndex(GetSource(api, &ar));
+        int scriptIndex = GetScriptIndex(GetSource(api, &ar));
 
         node = new TiXmlElement("function");
         node->LinkEndChild(WriteXmlNode("script", scriptIndex));
@@ -2408,21 +2408,21 @@ bool DebugBackend::GetClassNameForMetatable(unsigned long api, lua_State* L, int
 
                 // Remove the value (the metatable) from the stack and just leave
                 // the key (the class name).
-                lua_pop_dll(api, L, 1);
+                lua_pop_dll(api, L, 1);    
                 // Remove the global table too
                 lua_remove_dll( api, L, -2);
                 int t2 = lua_gettop_dll(api, L);
                 assert(t2 - t1 == 1);
 
                 return true;
-
+            
             }
         }
 
         // Leave the key on the stack for the next call to lua_next.
         lua_pop_dll(api, L, 1);
-
-    }
+    
+    }    
 
     // Pop global table
     lua_pop_dll( api, L, 1);
@@ -2967,7 +2967,7 @@ unsigned int DebugBackend::GetUnifiedStack(unsigned long api, const StackEntry n
                 }
                 else
                 {
-                    function = "<Unknown>";
+                    function = "<Unknown>";            
                 }
             }
 
