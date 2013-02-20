@@ -301,7 +301,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     RegisterDebugLibrary(api, L);
 
     // Start debugging on this VM.
-    SetHookEnabled(api, L, true);
+    SetHookMode(api, L, HookMode_Full);
 
     // This state may be a thread which will be garbage collected, so we need to register
     // to recieve notification when it is destroyed.
@@ -876,7 +876,7 @@ void DebugBackend::CommandThreadProc()
 
             for (unsigned int i = 0; i < m_vms.size(); ++i)
             {
-                SetHookEnabled(m_vms[i]->api, m_vms[i]->L, false);
+                SetHookMode(m_vms[i]->api, m_vms[i]->L, HookMode_None);
             }
 
             // Signal that we're detached.
@@ -1714,7 +1714,7 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     int localTable   = envTable - 2;
 
     // Disable the debugger hook so that we don't try to debug the expression.
-    SetHookEnabled(api, L, false);
+    SetHookMode(api, L, HookMode_None);
     EnableIntercepts(false);
     
     int stackTop = lua_gettop_dll(api, L);    
@@ -1831,7 +1831,7 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
 
     // Reenable the debugger hook
     EnableIntercepts(true);
-    SetHookEnabled(api, L, true);
+    SetHookMode(api, L, HookMode_Full);
 
     int t2 = lua_gettop_dll(api, L);
     assert(t1 == t2);
