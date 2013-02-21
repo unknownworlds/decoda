@@ -98,6 +98,8 @@ public:
      */
     int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
 
+    int RegisterScript(lua_State* L, lua_Debug* ar);
+
     /**
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step into the function call.
@@ -161,7 +163,9 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    int GetScriptIndex(const char* name) const;
+    unsigned int GetScriptIndex(const char* name) const;
+
+    bool StackHasBreakpoint(unsigned long api, lua_State* L);
 
     /**
      * Returns the class name associated with the metatable index. This makes
@@ -391,6 +395,8 @@ private:
         std::string     name;
         unsigned int    stackTop;
         bool            luaJitWorkAround;
+        bool            breakpointInStack;
+        std::string     lastFunctions;
     };
 
     struct StackEntry
@@ -516,6 +522,8 @@ private:
      * Logs information about a hook callback event. This is used for debugging.
      */
     void LogHookEvent(unsigned long api, lua_State* L, lua_Debug* ar);
+
+    void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
 
     /**
      * Calls the named meta-method for the specified value. If the value does
