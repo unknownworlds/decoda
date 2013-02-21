@@ -225,10 +225,18 @@ private:
          */
         bool GetHasBreakPoint(unsigned int line) const;
         
+        bool HasBreakPointInRange(unsigned int start, unsigned int end) const;
+
+        bool ToggleBreakpoint(unsigned int line);
+
+        bool HasBreakpointsActive();
+
+        void ClearBreakpoints();
+
         std::string                 name;
         std::string                 source;
         std::string                 title;
-        std::vector<bool>           breakpoints;    // True for the indices of lines that have breakpoints.
+        std::vector<unsigned int>   breakpoints;    // True for the indices of lines that have breakpoints.
         std::vector<unsigned int>   validLines;     // Lines that can have breakpoints on them.
 
     };

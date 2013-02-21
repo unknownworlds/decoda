@@ -68,11 +68,54 @@ const char* MemoryReader(lua_State* L, void* data, size_t* size)
 
 bool DebugBackend::Script::GetHasBreakPoint(unsigned int line) const
 {
-    if (line < breakpoints.size())
+    
+    for (size_t i = 0; i < breakpoints.size(); i++)
     {
-        return breakpoints[line];
+      if(breakpoints[i] == line){
+        return true;
+      }
     }
+    
     return false;
+}
+
+bool DebugBackend::Script::HasBreakPointInRange(unsigned int start, unsigned int end) const
+{
+    
+    for (size_t i = 0; i < breakpoints.size(); i++)
+    {
+      if(breakpoints[i] >= start && breakpoints[i] < end)
+      {
+        return true;
+      }
+    }
+    
+    return false;
+}
+
+bool DebugBackend::Script::ToggleBreakpoint(unsigned int line)
+{
+
+    std::vector<unsigned int>::iterator result = std::find(breakpoints.begin(), breakpoints.end(), line);
+
+    if(result == breakpoints.end())
+    {
+      breakpoints.push_back(line);
+      return true;
+    }else{
+      breakpoints.erase(result);
+      return false;
+    }
+}
+
+void DebugBackend::Script::ClearBreakpoints()
+{
+    breakpoints.resize(0);
+}
+
+bool DebugBackend::Script::HasBreakpointsActive()
+{
+  return breakpoints.size() != 0;
 }
 
 DebugBackend& DebugBackend::Get()
@@ -1079,20 +1122,15 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
     if (foundValidLine)
     {
-
-        if (script->breakpoints.size() < line + 1)
-        {
-            script->breakpoints.resize(line + 1, false);
-        }
-
-        script->breakpoints[line] = !script->breakpoints[line];
+        
+        bool breakpointSet = script->ToggleBreakpoint(line);
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
         m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));  
         m_eventChannel.WriteUInt32(scriptIndex);
         m_eventChannel.WriteUInt32(line);
-        m_eventChannel.WriteUInt32(script->breakpoints[line]);
+        m_eventChannel.WriteUInt32(breakpointSet);
         m_eventChannel.Flush();
     
     }
