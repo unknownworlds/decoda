@@ -889,6 +889,12 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
 void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent)
 {
+    //Only update the hook mode for call or return hook events 
+    if(hookEvent->event == LUA_HOOKLINE)
+    {
+        return;
+    } 
+    
     VirtualMachine* vm = GetVm(L);
     HookMode mode = HookMode_CallsOnly;
 
