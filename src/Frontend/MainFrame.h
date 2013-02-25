@@ -1462,9 +1462,9 @@ private:
     static const char*              s_updateUrl;
  
     int                             m_openFilesMessage;
-
+#ifndef NOUPDATER
     Updater                         m_updater;
-
+#endif
     Project*                        m_project;       
     std::vector<OpenFile*>          m_openFiles;
     SymbolParser*                   m_symbolParser;

@@ -1681,8 +1681,10 @@ void MainFrame::OnHelpContents(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::OnHelpCheckForUpdate(wxCommandEvent& event)
 {
+#ifndef NOUPDATER
     m_updater.CheckForUpdates(s_updateUrl, MainApp::s_buildNumber, GetHandle());
     HandleUpdate();
+#endif
 }
 
 void MainFrame::OnHelpAbout(wxCommandEvent& WXUNUSED(event))
@@ -4098,7 +4100,7 @@ void MainFrame::CheckForUpdate()
     // Decoda is distributed with another application, we assume the application
     // will provide updates with the rest of the software.
 
-#ifndef DEDICATED_PRODUCT_VERSION
+#if defined(DEDICATED_PRODUCT_VERSION) && !defined(NOUPDATER)
 
     if (!m_systemSettings.GetCheckForUpdates())
     {
@@ -5874,7 +5876,7 @@ void MainFrame::UpdateCallback(Updater* updater, void* param)
 
 void MainFrame::HandleUpdate()
 {
-
+#ifndef NOUPDATER
     if (m_updater.ShowUpdateNotice(GetHandle()))
     {
 
@@ -5891,7 +5893,7 @@ void MainFrame::HandleUpdate()
         }
 
     }
-
+#endif
 }
 
 void MainFrame::UpdateSyntaxColoring(OpenFile* openFile)
