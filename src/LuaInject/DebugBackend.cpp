@@ -960,16 +960,18 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L){
           //ignore c functions
           continue;
         }
-        
+
         vm->lastFunctions = functionInfo.source;
 
         int scriptIndex = GetScriptIndex(vm->lastFunctions);
         
-        if(scriptIndex != -1 && m_scripts[scriptIndex]->HasBreakpointsActive())
+        Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
+
+        if(script != NULL && (script->HasBreakPointInRange(functionInfo.linedefined, functionInfo.lastlinedefined) ||
+           //Check if the function is the top level chunk of a source file                       
+           (script->HasBreakpointsActive() && functionInfo.linedefined == 0 && functionInfo.lastlinedefined == 0)))
         {
-          return m_scripts[scriptIndex]->HasBreakPointInRange(functionInfo.linedefined, functionInfo.lastlinedefined) ||
-                 //Check if the function is the top level chunk of a source file                       
-                 (functionInfo.linedefined == 0 && functionInfo.lastlinedefined == 0);
+            return true;
         }
 
     }
