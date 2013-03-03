@@ -327,7 +327,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->api                 = api;
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
-    vm->breakpointInStack = false;
+    vm->breakpointInStack   = true;// Force the stack tobe checked when the first script is entered
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -913,14 +913,18 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
             scriptIndex = GetScriptIndex(vm->lastFunctions);
         }
         
-        if(scriptIndex != -1 && m_scripts[scriptIndex]->HasBreakPointInRange(hookEvent->linedefined, hookEvent->lastlinedefined))
+        Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
+
+        if(script != NULL && (script->HasBreakPointInRange(hookEvent->linedefined, hookEvent->lastlinedefined) ||
+           //Check if the function is the top level chunk of a script because they always have there lastlinedefined set to 0                  
+           (script->HasBreakpointsActive() && hookEvent->linedefined == 0 && hookEvent->lastlinedefined == 0)))
         {
             mode = HookMode_Full;
             vm->breakpointInStack = true;
         }
     }
 
-    //keep the hook in Full mode while theres a function in the stack somewhere that has a breakpoint in it
+    //Keep the hook in Full mode while theres a function in the stack somewhere that has a breakpoint in it
     if(mode != HookMode_Full && vm->breakpointInStack)
     {
       if(StackHasBreakpoint(api, L))
