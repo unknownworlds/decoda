@@ -20,29 +20,23 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#include "CriticalSectionTryLock.h"
 #include "CriticalSection.h"
 
-CriticalSection::CriticalSection()
+CriticalSectionTryLock::CriticalSectionTryLock(CriticalSection& criticalSection) :
+    m_criticalSection(criticalSection)
 {
-    InitializeCriticalSection(&m_criticalSection);
-}
-    
-CriticalSection::~CriticalSection()
-{
-    DeleteCriticalSection(&m_criticalSection);
+    m_isHeld = m_criticalSection.TryEnter();
 }
 
-void CriticalSection::Enter()
+CriticalSectionTryLock::~CriticalSectionTryLock()
 {
-    EnterCriticalSection(&m_criticalSection);
+   if (m_isHeld) {
+      m_criticalSection.Exit();
+   }
 }
 
-void CriticalSection::Exit()
+bool CriticalSectionTryLock::IsHeld() const
 {
-    LeaveCriticalSection(&m_criticalSection);
-}
-
-bool CriticalSection::TryEnter()
-{
-    return TryEnterCriticalSection(&m_criticalSection) != FALSE;
+   return m_isHeld;
 }

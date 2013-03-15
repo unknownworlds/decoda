@@ -55,6 +55,14 @@ public:
      */
     void Exit();
 
+    /**
+     * Tries to obtain ownership of the critical section.  If another thread
+     * is currently holding the critical section, the method will return
+     * false without acquiring it.  If the critical section is not being
+     * held, this behaves exactly as Enter()
+     */
+    bool TryEnter();
+
 private:
 
     /**
