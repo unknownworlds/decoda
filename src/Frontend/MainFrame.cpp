@@ -1789,14 +1789,13 @@ void MainFrame::SetMostRecentlyUsedPage(int pageIndex)
 
 void MainFrame::RemovePageFromTabOrder(int pageIndex)
 {
-
     int nextPageIndex = -1;
     std::vector<int>::iterator copyFrom = m_tabOrder.begin();
     for (std::vector<int>::iterator copyTo = m_tabOrder.begin(); copyTo != m_tabOrder.end(); ++copyFrom)
     {
         if (copyFrom == m_tabOrder.end())
         {
-            assert(copyFrom + 1 == m_tabOrder.end()); // At most only one item can be removed
+            assert(copyTo + 1 == m_tabOrder.end()); // At most only one item can be removed
             m_tabOrder.pop_back();
             break;
         }
@@ -5250,7 +5249,7 @@ void MainFrame::ReloadFile(OpenFile* file)
     //Erase breakpoints past the end of the file and re-add the markers for the rest
     for (std::vector<unsigned int>::iterator it = breakpoints.begin(); it != breakpoints.end() ;)
     {
-        if (*it >= newLineCount)
+        if (*it >= (unsigned int)newLineCount)
         {
           it = breakpoints.erase(it);
         }
