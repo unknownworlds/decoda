@@ -3925,11 +3925,15 @@ void MainFrame::LoadExternalTool(wxXmlNode* node)
     wxString arguments;
     node->GetPropVal("arguments", &arguments);
 
+    wxString initialDirectory;
+    node->GetPropVal("initialdirectory", &initialDirectory);
+
     ExternalTool* tool = new ExternalTool;
 
     tool->SetTitle(title);
     tool->SetCommand(command);
     tool->SetArguments(arguments);
+    tool->SetInitialDirectory(initialDirectory);
 
     m_tools.push_back(tool);
 
@@ -4058,6 +4062,7 @@ wxXmlNode* MainFrame::SaveExternalTool(const ExternalTool* tool) const
     node->AddProperty("title", tool->GetTitle());
     node->AddProperty("command", tool->GetCommand());
     node->AddProperty("arguments", tool->GetArguments());
+    node->AddProperty("initialdirectory", tool->GetInitialDirectory());
 
     return node;
 
