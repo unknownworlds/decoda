@@ -3165,7 +3165,7 @@ void MainFrame::OnIdle(wxIdleEvent& event)
 
         wxProcess* process = m_runningProcesses[i];
         
-        if (CopyProcessOutputToWindow(process))
+        if (m_processOutputSink.Pump(*m_output, *process))
         {
             // We have more input to process, so get another idle.
             event.RequestMore();
@@ -3204,9 +3204,7 @@ void MainFrame::OnProcessTerminate(wxProcessEvent& event)
         {
 
             // Grab any remaning output from this process.
-            while (CopyProcessOutputToWindow(process))
-            {
-            }
+            m_processOutputSink.Dump(*m_output, *process);
 
             // Ring the bell to alert the user.
             wxBell();
@@ -3722,29 +3720,6 @@ void MainFrame::FindText(OpenFile* file, const wxString& text, int flags)
 
 }
 
-bool MainFrame::CopyProcessOutputToWindow(wxProcess* process)
-{
-    
-    bool hasInput = false;
-
-    if (process->IsInputAvailable())
-    {
-        wxTextInputStream stream(*process->GetInputStream());
-        m_output->OutputMessage(stream.ReadLine());
-        hasInput = true;
-    }
-
-    if (process->IsErrorAvailable() )
-    {
-        wxTextInputStream stream(*process->GetErrorStream());
-        m_output->OutputMessage(stream.ReadLine());
-        hasInput = true;
-    }
-
-    return hasInput;
-
-}
-    
 void MainFrame::SubstituteVariableArguments(wxString& text) const
 {
     
