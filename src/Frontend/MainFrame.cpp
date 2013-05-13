@@ -1799,7 +1799,7 @@ void MainFrame::RemovePageFromTabOrder(int pageIndex)
     {
         if (copyFrom == m_tabOrder.end())
         {
-            assert(copyFrom + 1 == m_tabOrder.end()); // At most only one item can be removed
+            assert(copyTo + 1 == m_tabOrder.end()); // At most only one item can be removed
             m_tabOrder.pop_back();
             break;
         }
