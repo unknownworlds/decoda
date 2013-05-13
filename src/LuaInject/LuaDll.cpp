@@ -58,6 +58,7 @@ typedef void            (*lua_close_cdecl_t)            (lua_State*);
 typedef lua_State*      (*lua_newthread_cdecl_t)        (lua_State*);
 typedef int             (*lua_error_cdecl_t)            (lua_State*);
 typedef int             (*lua_sethook_cdecl_t)          (lua_State*, lua_Hook, int, int);
+typedef int             (*lua_gethookmask_cdecl_t)      (lua_State*);
 typedef int             (*lua_getinfo_cdecl_t)          (lua_State*, const char*, lua_Debug* ar);
 typedef void            (*lua_remove_cdecl_t)           (lua_State*, int);
 typedef void            (*lua_settable_cdecl_t)         (lua_State*, int);
@@ -125,6 +126,7 @@ typedef void            (__stdcall *lua_close_stdcall_t)          (lua_State*);
 typedef lua_State*      (__stdcall *lua_newthread_stdcall_t)      (lua_State*);
 typedef int             (__stdcall *lua_error_stdcall_t)          (lua_State*);
 typedef int             (__stdcall *lua_sethook_stdcall_t)        (lua_State*, lua_Hook_stdcall, int, int);
+typedef int             (__stdcall *lua_gethookmaskstdcall_t)     (lua_State*);
 typedef int             (__stdcall *lua_getinfo_stdcall_t)        (lua_State*, const char*, lua_Debug* ar);
 typedef void            (__stdcall *lua_remove_stdcall_t)         (lua_State*, int);
 typedef void            (__stdcall *lua_settable_stdcall_t)       (lua_State*, int);
@@ -215,6 +217,7 @@ struct LuaInterface
     lua_error_cdecl_t            lua_error_dll_cdecl;
     lua_gettop_cdecl_t           lua_gettop_dll_cdecl;
     lua_sethook_cdecl_t          lua_sethook_dll_cdecl;
+    lua_gethookmask_cdecl_t      lua_gethookmask_dll_cdecl;
     lua_getinfo_cdecl_t          lua_getinfo_dll_cdecl;
     lua_remove_cdecl_t           lua_remove_dll_cdecl;
     lua_settable_cdecl_t         lua_settable_dll_cdecl;
@@ -283,6 +286,7 @@ struct LuaInterface
     lua_error_stdcall_t          lua_error_dll_stdcall;
     lua_gettop_stdcall_t         lua_gettop_dll_stdcall;
     lua_sethook_stdcall_t        lua_sethook_dll_stdcall;
+    lua_gethookmaskstdcall_t     lua_gethookmask_dll_stdcall;
     lua_getinfo_stdcall_t        lua_getinfo_dll_stdcall;
     lua_remove_stdcall_t         lua_remove_dll_stdcall;
     lua_settable_stdcall_t       lua_settable_dll_stdcall;
@@ -575,17 +579,71 @@ __declspec(naked) void HookHandler(unsigned long api, lua_State* L, lua_Debug* a
 
 }
 
-void SetHookEnabled(unsigned long api, lua_State* L, bool hookEnabled)
+void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
 {
-    if (hookEnabled)
+
+  if(mode == HookMode_None)
+  {
+      lua_sethook_dll(api, L, NULL, 0, 0);
+  }
+  else
+  {
+      int mask;
+
+      switch (mode)
+      {
+      case HookMode_CallsOnly:
+        mask = LUA_MASKCALL;
+        break;
+      case HookMode_CallsAndReturns:
+        mask = LUA_MASKCALL|LUA_MASKRET;
+        break;
+      case HookMode_Full:
+        mask = LUA_MASKCALL|LUA_MASKRET|LUA_MASKLINE;
+        break;
+      }
+
+      lua_sethook_dll(api, L, g_interfaces[api].HookHandler, mask, 0);
+  }
+
+  
+}
+
+int lua_gethookmask(unsigned long api, lua_State *L)
+{
+    if (g_interfaces[api].lua_gethookmask_dll_cdecl != NULL)
     {
-        lua_sethook_dll(api, L, g_interfaces[api].HookHandler, LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE, 0);
+        return g_interfaces[api].lua_gethookmask_dll_cdecl(L);
     }
     else
     {
-        lua_sethook_dll(api, L, g_interfaces[api].HookHandler, 0, 0);
+        return g_interfaces[api].lua_gethookmask_dll_stdcall(L);
     }
 }
+
+HookMode GetHookMode(unsigned long api, lua_State* L)
+{
+
+  int mask = lua_gethookmask(api, L);
+
+  if(mask == 0)
+  {
+    return HookMode_None;
+  }
+  else if(mask == (LUA_MASKCALL))
+  {
+    return HookMode_CallsOnly;
+  }
+  else if(mask == (LUA_MASKCALL|LUA_MASKRET))
+  {
+    return HookMode_CallsAndReturns;
+  }
+  else
+  {
+    return HookMode_Full;
+  }  
+}
+
 
 bool lua_pushthread_dll(unsigned long api, lua_State *L)
 {
@@ -2874,6 +2932,7 @@ bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HAN
     GET_FUNCTION(lua_pushnumber);
     GET_FUNCTION(lua_pushlightuserdata);
     GET_FUNCTION(lua_checkstack);
+    GET_FUNCTION(lua_gethookmask);
 
     // Only present in Lua 5.1 (*number funtions used in Lua 4.0)
     GET_FUNCTION_OPTIONAL(lua_pushinteger);
