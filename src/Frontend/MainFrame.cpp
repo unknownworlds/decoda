@@ -5236,7 +5236,7 @@ void MainFrame::ReloadFile(OpenFile* file)
 {
 
     CodeEdit& editor = *file->edit;
-    int oldScrollPos = editor.GetScrollPos(wxVSCROLL);
+    unsigned int oldScrollPos = std::max(editor.GetScrollPos(wxVSCROLL), 0);
 
     //Disable modified events so OnCodeEditModified is not called
     editor.SetModEventMask(0);
@@ -5246,7 +5246,7 @@ void MainFrame::ReloadFile(OpenFile* file)
 
     editor.SetModEventMask(wxSCI_MODEVENTMASKALL);
     
-    int newLineCount = editor.GetLineCount();
+    unsigned int newLineCount = editor.GetLineCount();
     
     std::vector<unsigned int>& breakpoints = file->file->breakpoints;
     
