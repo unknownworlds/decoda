@@ -240,7 +240,7 @@ private:
         std::string                 name;
         std::string                 source;
         std::string                 title;
-        std::vector<unsigned int>   breakpoints;    // True for the indices of lines that have breakpoints.
+        std::vector<unsigned int>   breakpoints;    // Lines that have breakpoints on them.
         std::vector<unsigned int>   validLines;     // Lines that can have breakpoints on them.
 
     };
