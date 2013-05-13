@@ -1468,7 +1468,7 @@ private:
     Project*                        m_project;       
     std::vector<OpenFile*>          m_openFiles;
     SymbolParser*                   m_symbolParser;
-	bool							m_waitForFinalSymbolParse; //For batch loading files more efficiently 
+    bool                            m_waitForFinalSymbolParse; //For batch loading files more efficiently 
     
     wxAuiManager                    m_mgr;
     wxString                        m_modeLayout[Mode_NumModes];

@@ -490,7 +490,7 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_symbolParser = new SymbolParser;
     m_symbolParser->SetEventHandler(this);
-	m_waitForFinalSymbolParse=false;
+    m_waitForFinalSymbolParse=false;
 
     // Creating a new project will clear this out, so save it.
     wxString lastProjectLoaded = m_lastProjectLoaded;
@@ -784,9 +784,9 @@ void MainFrame::SetProject(Project* project)
     
     UpdateCaption();
 
-	m_waitForFinalSymbolParse=true;
+    m_waitForFinalSymbolParse = true;
     m_projectExplorer->SetProject(m_project);
-	m_statusBar->SetStatusText("Loading Symbols", 0);
+    m_statusBar->SetStatusText("Loading Symbols", 0);
     m_symbolParser->SetProject(m_project);
     m_breakpointsWindow->SetProject(m_project);
 
@@ -4728,8 +4728,8 @@ void MainFrame::SetDefaultHotKeys()
 
     m_keyBinder.SetShortcut(ID_DebugStart,                  wxT("F5"));
     m_keyBinder.SetShortcut(ID_DebugStartWithoutDebugging,  wxT("Ctrl+F5"));
-	m_keyBinder.SetShortcut(ID_DebugStepInto,               wxT("F11"));
-	m_keyBinder.SetShortcut(ID_DebugStepOver,               wxT("F10"));
+    m_keyBinder.SetShortcut(ID_DebugStepInto,               wxT("F11"));
+    m_keyBinder.SetShortcut(ID_DebugStepOver,               wxT("F10"));
     m_keyBinder.SetShortcut(ID_DebugQuickWatch,             wxT("Shift+F9"));
     m_keyBinder.SetShortcut(ID_DebugToggleBreakpoint,       wxT("F9"));
     m_keyBinder.SetShortcut(ID_DebugDeleteAllBreakpoints,   wxT("Ctrl+Shift+F9"));
@@ -6100,28 +6100,28 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
     Project::File* file = m_project->GetFileById(fileId);
 
     //If we are batch loading files, wait for the final symbol parse of that
-	//batch before adding symbol data to tree
-	if (m_waitForFinalSymbolParse)
-	{
-		if (!event.GetIsFinalQueueItem())
-		{
-			//Don't add symbol data yet.
-			return;
-		}
-		else
-		{
-			//Batch loading is done
-			m_waitForFinalSymbolParse=false;
-			m_statusBar->SetStatusText("", 0);
+    //batch before adding symbol data to tree
+    if (m_waitForFinalSymbolParse)
+    {
+        if (!event.GetIsFinalQueueItem())
+        {
+            //Don't add symbol data yet.
+            return;
+        }
+        else
+        {
+            //Batch loading is done
+            m_waitForFinalSymbolParse=false;
+            m_statusBar->SetStatusText("", 0);
 
-			//Set the project to itself so we can trigger Rebuild()
-			m_projectExplorer->SetProject(m_project);
-			
-			return;
-		}
-	}
+            //Set the project to itself so we can trigger Rebuild()
+            m_projectExplorer->SetProject(m_project);
+            
+            return;
+        }
+    }
 
-	if (file != NULL)
+    if (file != NULL)
     {
         m_projectExplorer->UpdateFile(file);
     }
