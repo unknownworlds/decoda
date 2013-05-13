@@ -490,7 +490,7 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_symbolParser = new SymbolParser;
     m_symbolParser->SetEventHandler(this);
-    m_waitForFinalSymbolParse=false;
+    m_waitForFinalSymbolParse = false;
 
     // Creating a new project will clear this out, so save it.
     wxString lastProjectLoaded = m_lastProjectLoaded;
@@ -6111,7 +6111,7 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
         else
         {
             //Batch loading is done
-            m_waitForFinalSymbolParse=false;
+            m_waitForFinalSymbolParse = false;
             m_statusBar->SetStatusText("", 0);
 
             //Set the project to itself so we can trigger Rebuild()
