@@ -79,7 +79,7 @@ private:
 
     unsigned int            m_fileId;
     std::vector<Symbol*>    m_symbols;
-	bool					m_isFinalQueueItem;
+    bool                    m_isFinalQueueItem;
 
 };
 

@@ -29,7 +29,7 @@ SymbolParserEvent::SymbolParserEvent(unsigned int fileId, const std::vector<Symb
 {
     m_fileId  = fileId;
     m_symbols = symbols;
-	m_isFinalQueueItem=isFinalQueueItem;
+    m_isFinalQueueItem = isFinalQueueItem;
 }
 
 wxEvent* SymbolParserEvent::Clone() const
