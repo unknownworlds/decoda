@@ -72,7 +72,8 @@ bool DebugBackend::Script::GetHasBreakPoint(unsigned int line) const
     
     for (size_t i = 0; i < breakpoints.size(); i++)
     {
-      if(breakpoints[i] == line){
+        if(breakpoints[i] == line)
+        {
         return true;
       }
     }
@@ -88,7 +89,7 @@ bool DebugBackend::Script::HasBreakPointInRange(unsigned int start, unsigned int
       if(breakpoints[i] >= start && breakpoints[i] < end)
       {
         return true;
-    }
+      }
     }
     
     return false;
@@ -103,7 +104,9 @@ bool DebugBackend::Script::ToggleBreakpoint(unsigned int line)
     {
       breakpoints.push_back(line);
       return true;
-    }else{
+    }
+    else
+    {
       breakpoints.erase(result);
       return false;
     }
@@ -645,7 +648,8 @@ int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, 
 
 }
 
-int DebugBackend::RegisterScript(lua_State* L, lua_Debug* ar){
+int DebugBackend::RegisterScript(lua_State* L, lua_Debug* ar)
+{
 
   const char* source = NULL;
   size_t size = 0;
@@ -672,8 +676,9 @@ int DebugBackend::RegisterScript(lua_State* L, lua_Debug* ar){
   m_criticalSection.Enter();
   
   // Since the script indices may have changed while we released the critical section,
-  // reaquire the script index.
+    // require the script index.
   return GetScriptIndex(ar->source);
+
 }
 
 void DebugBackend::Message(const char* message, MessageType type)
@@ -826,7 +831,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (scriptIndex == -1)
         {
             
-            // This isn't a script we've seen before, so tell the debugger about it.
+          // This isn't a script we've seen before, so tell the debugger about it.
           scriptIndex = RegisterScript(L, ar);
         }
 
@@ -881,7 +886,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
                 }
             }
         }
-        
+
         m_criticalSection.Exit(); 
     
     }
@@ -905,7 +910,7 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     if(hookEvent->event == LUA_HOOKCALL && hookEvent->linedefined != -1)
     {
         vm->lastFunctions = hookEvent->source;
-
+        
         int scriptIndex = GetScriptIndex(vm->lastFunctions);
         
         if(scriptIndex == -1)
@@ -922,9 +927,9 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
         {
             mode = HookMode_Full;
             vm->breakpointInStack = true;
-            }
         }
-        
+    }
+
     //Keep the hook in Full mode while theres a function in the stack somewhere that has a breakpoint in it
     if(mode != HookMode_Full && vm->breakpointInStack)
     {
@@ -952,7 +957,8 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     }
 }
 
-bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L){
+bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
+{
     
     lua_Debug functionInfo;
     VirtualMachine* vm = GetVm(L);
@@ -961,7 +967,8 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L){
     {
         lua_getinfo_dll(api, L, "S", &functionInfo);
 
-        if(functionInfo.linedefined == -1){
+        if(functionInfo.linedefined == -1)
+        {
           //ignore c functions
           continue;
         }
@@ -978,7 +985,7 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L){
         {
             return true;
         }
-    
+
     }
 
     return false;            
@@ -1242,7 +1249,7 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
     if (foundValidLine)
     {
-
+        
         bool breakpointSet = script->ToggleBreakpoint(line);
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
@@ -3137,7 +3144,7 @@ unsigned int DebugBackend::GetUnifiedStack(unsigned long api, const StackEntry n
                 }
                 else
                 {
-                    function = "<Unknown>";
+                    function = "<Unknown>";            
                 }
             }
 
