@@ -490,6 +490,7 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_symbolParser = new SymbolParser;
     m_symbolParser->SetEventHandler(this);
+	m_waitForFinalSymbolParse=false;
 
     // Creating a new project will clear this out, so save it.
     wxString lastProjectLoaded = m_lastProjectLoaded;
@@ -783,7 +784,9 @@ void MainFrame::SetProject(Project* project)
     
     UpdateCaption();
 
+	m_waitForFinalSymbolParse=true;
     m_projectExplorer->SetProject(m_project);
+	m_statusBar->SetStatusText("Loading Symbols", 0);
     m_symbolParser->SetProject(m_project);
     m_breakpointsWindow->SetProject(m_project);
 
@@ -6096,7 +6099,29 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
     unsigned int fileId = event.GetFileId();
     Project::File* file = m_project->GetFileById(fileId);
 
-    if (file != NULL)
+    //If we are batch loading files, wait for the final symbol parse of that
+	//batch before adding symbol data to tree
+	if (m_waitForFinalSymbolParse)
+	{
+		if (!event.GetIsFinalQueueItem())
+		{
+			//Don't add symbol data yet.
+			return;
+		}
+		else
+		{
+			//Batch loading is done
+			m_waitForFinalSymbolParse=false;
+			m_statusBar->SetStatusText("", 0);
+
+			//Set the project to itself so we can trigger Rebuild()
+			m_projectExplorer->SetProject(m_project);
+			
+			return;
+		}
+	}
+
+	if (file != NULL)
     {
         m_projectExplorer->UpdateFile(file);
     }
