@@ -24,6 +24,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "LuaDll.h"
 #include "LuaCheckStack.h"
 #include "CriticalSectionLock.h"
+#include "CriticalSectionTryLock.h"
 #include "StlUtility.h"
 #include "XmlUtility.h"
 #include "DebugHelp.h"
@@ -987,6 +988,9 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
 
 unsigned int DebugBackend::GetScriptIndex(const std::string& name) const
 {
+    if (name == NULL) {
+       return -1;
+    }
 
     NameToScriptMap::const_iterator iterator = m_nameToScript.find(name);
 
@@ -1423,12 +1427,24 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         // Send the exception event. Ignore the top of the stack when we send the
         // call stack since the top of the call stack is this function.
 
-        CriticalSectionLock lock(m_breakLock);
+        // Sometimes the break lock will already be held.  For example, consider
+        // the following sequence of events:
+        //   1) The main lua thread is stopped in the debugger, holding the
+        //      break lock in DebugBackend::BreakFromScript.
+        //   2) The decoda thread tries to evaluate a variable from the watch
+        //      window
+        //   3) The evaluation of __towatch or __tostring calls lua_error()
+        // That will lead us right here, unable to grab the break lock.  To avoid
+        // deadlocking in this case, just send an error message.
 
-        SendBreakEvent(api, L, 1);
-        SendExceptionEvent(L, message);
-        WaitForContinue();
-
+        CriticalSectionTryLock lock(m_breakLock);
+        if (lock.IsHeld()) {
+           SendBreakEvent(api, L, 1);
+           SendExceptionEvent(L, message);
+           WaitForContinue();
+        } else {
+           Message(message, MessageType_Error);
+        }
     }
         
     // Try invoking the user specified error function.
@@ -3083,9 +3099,10 @@ unsigned int DebugBackend::GetUnifiedStack(const StackEntry nativeStack[], unsig
         }
 
         // Walk up the script stack until we hit a transition into C.
-        while (scriptPos >= 0)
+        while (scriptPos >= 0 && stackSize < s_maxStackSize)
         {
 
+            const char* what = scriptStack[scriptPos].what;
             const char* function = scriptStack[scriptPos].name;
 
             if (function == NULL || strcmp(function, "") == 0)
@@ -3100,7 +3117,7 @@ unsigned int DebugBackend::GetUnifiedStack(const StackEntry nativeStack[], unsig
                 }
             }
 
-            if (strcmp(scriptStack[scriptPos].what, "C") == 0)
+            if (what != NULL && strcmp(what, "C") == 0)
             {
                 --scriptPos;
                 break;
