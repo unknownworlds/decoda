@@ -96,7 +96,7 @@ public:
      * was not available for the script. This should be set if the script was encountered
      * through a call other than the load function.
      */
-    unsigned int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+    int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
 
     int RegisterScript(lua_State* L, lua_Debug* ar);
 
@@ -163,7 +163,7 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    int GetScriptIndex(const char* name) const;
 
     bool StackHasBreakpoint(unsigned long api, lua_State* L);
 

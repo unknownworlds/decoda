@@ -517,7 +517,7 @@ int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, co
 
 }
 
-unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
+int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
 {
 
     CriticalSectionLock lock(m_criticalSection);
@@ -801,7 +801,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         // Fill in the rest of the structure.
         lua_getinfo_dll(api, L, "Sl", ar);
 
-        unsigned int scriptIndex = GetScriptIndex(ar->source);
+        int scriptIndex = GetScriptIndex(ar->source);
 
         bool stop = false;
 
@@ -986,7 +986,7 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
     return false;            
 }
 
-unsigned int DebugBackend::GetScriptIndex(const char* name) const
+int DebugBackend::GetScriptIndex(const char* name) const
 {
     if (name == NULL) 
     {
@@ -2196,7 +2196,7 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
         lua_Debug ar;
         lua_getinfo_dll(api, L, ">Sn", &ar);
 
-        unsigned int scriptIndex = GetScriptIndex(ar.source);
+        int scriptIndex = GetScriptIndex(ar.source);
 
         node = new TiXmlElement("function");
         node->LinkEndChild(WriteXmlNode("script", scriptIndex));
