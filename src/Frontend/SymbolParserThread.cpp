@@ -93,8 +93,12 @@ wxThread::ExitCode SymbolParserThread::Entry()
 
                 ParseFileSymbols(input, symbols);
 
+                m_itemsLock.Enter();
+                bool isLastItem=m_items.empty();
+                m_itemsLock.Leave();
+
                 // Dispatch the message to event handler.
-                SymbolParserEvent event(m_headItem->fileId, symbols);
+                SymbolParserEvent event(m_headItem->fileId, symbols, isLastItem);
                 m_eventHandler->AddPendingEvent(event);
 
             }

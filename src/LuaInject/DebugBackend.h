@@ -96,7 +96,9 @@ public:
      * was not available for the script. This should be set if the script was encountered
      * through a call other than the load function.
      */
-    unsigned int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+    int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+
+    int RegisterScript(lua_State* L, lua_Debug* ar);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
@@ -161,7 +163,9 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    int GetScriptIndex(const char* name) const;
+
+    bool StackHasBreakpoint(unsigned long api, lua_State* L);
 
     /**
      * Returns the class name associated with the metatable index. This makes
@@ -225,10 +229,18 @@ private:
          */
         bool GetHasBreakPoint(unsigned int line) const;
         
+        bool HasBreakPointInRange(unsigned int start, unsigned int end) const;
+
+        bool ToggleBreakpoint(unsigned int line);
+
+        bool HasBreakpointsActive();
+
+        void ClearBreakpoints();
+
         std::string                 name;
         std::string                 source;
         std::string                 title;
-        std::vector<bool>           breakpoints;    // True for the indices of lines that have breakpoints.
+        std::vector<unsigned int>   breakpoints;    // Lines that have breakpoints on them.
         std::vector<unsigned int>   validLines;     // Lines that can have breakpoints on them.
 
     };
@@ -383,6 +395,8 @@ private:
         std::string     name;
         unsigned int    stackTop;
         bool            luaJitWorkAround;
+        bool            breakpointInStack;
+        std::string     lastFunctions;
     };
 
     struct StackEntry
@@ -508,6 +522,8 @@ private:
      * Logs information about a hook callback event. This is used for debugging.
      */
     void LogHookEvent(unsigned long api, lua_State* L, lua_Debug* ar);
+
+    void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
 
     /**
      * Calls the named meta-method for the specified value. If the value does

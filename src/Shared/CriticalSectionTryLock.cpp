@@ -20,34 +20,23 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include "SymbolParserEvent.h"
+#include "CriticalSectionTryLock.h"
+#include "CriticalSection.h"
 
-DEFINE_EVENT_TYPE(wxEVT_SYMBOL_PARSER_EVENT)
-
-SymbolParserEvent::SymbolParserEvent(unsigned int fileId, const std::vector<Symbol*>& symbols, bool isFinalQueueItem)
-    : wxEvent(0, wxEVT_SYMBOL_PARSER_EVENT)
+CriticalSectionTryLock::CriticalSectionTryLock(CriticalSection& criticalSection) :
+    m_criticalSection(criticalSection)
 {
-    m_fileId  = fileId;
-    m_symbols = symbols;
-    m_isFinalQueueItem = isFinalQueueItem;
+    m_isHeld = m_criticalSection.TryEnter();
 }
 
-wxEvent* SymbolParserEvent::Clone() const
+CriticalSectionTryLock::~CriticalSectionTryLock()
 {
-    return new SymbolParserEvent(*this);
+   if (m_isHeld) {
+      m_criticalSection.Exit();
+   }
 }
 
-unsigned int SymbolParserEvent::GetFileId() const
+bool CriticalSectionTryLock::IsHeld() const
 {
-    return m_fileId;
-}
-
-const std::vector<Symbol*>& SymbolParserEvent::GetSymbols() const
-{
-    return m_symbols;
-}
-
-bool SymbolParserEvent::GetIsFinalQueueItem() const
-{
-    return m_isFinalQueueItem;
+   return m_isHeld;
 }

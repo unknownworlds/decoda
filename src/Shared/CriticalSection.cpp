@@ -41,3 +41,8 @@ void CriticalSection::Exit()
 {
     LeaveCriticalSection(&m_criticalSection);
 }
+
+bool CriticalSection::TryEnter()
+{
+    return TryEnterCriticalSection(&m_criticalSection) != FALSE;
+}
