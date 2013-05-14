@@ -911,12 +911,12 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     {
         vm->lastFunctions = hookEvent->source;
         
-        int scriptIndex = GetScriptIndex(vm->lastFunctions);
+        int scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
         
         if(scriptIndex == -1)
         {
             RegisterScript(L, hookEvent);
-            scriptIndex = GetScriptIndex(vm->lastFunctions);
+            scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
         }
         
         Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
@@ -975,7 +975,7 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
 
         vm->lastFunctions = functionInfo.source;
 
-        int scriptIndex = GetScriptIndex(vm->lastFunctions);
+        int scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
         
         Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
 
