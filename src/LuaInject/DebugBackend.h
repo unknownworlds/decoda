@@ -163,7 +163,7 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const std::string& name) const;
+    unsigned int GetScriptIndex(const char* name) const;
 
     bool StackHasBreakpoint(unsigned long api, lua_State* L);
 
