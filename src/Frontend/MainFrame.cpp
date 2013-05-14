@@ -5252,7 +5252,7 @@ void MainFrame::ReloadFile(OpenFile* file)
     //Erase breakpoints past the end of the file and re-add the markers for the rest
     for (std::vector<unsigned int>::iterator it = breakpoints.begin(); it != breakpoints.end() ;)
     {
-        if (*it >= (unsigned int)newLineCount)
+        if (*it >= newLineCount)
         {
           it = breakpoints.erase(it);
         }

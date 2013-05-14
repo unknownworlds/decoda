@@ -155,7 +155,7 @@ void KeyBinderDialog::Initialize()
         {
             // We haven't encountered this group yet, so create a new node for it.
             std::string groupName = m_commands[i]->group;
-            groupNode = m_commandTreeCtrl->AppendItem(root, m_commands[i]->group);
+            groupNode = m_commandTreeCtrl->AppendItem(root, groupName);
             groups.insert(std::make_pair(groupName, groupNode));
         }
         else

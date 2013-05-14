@@ -988,8 +988,9 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
 
 unsigned int DebugBackend::GetScriptIndex(const std::string& name) const
 {
-    if (name == NULL) {
-       return -1;
+    if (name == NULL) 
+    {
+        return -1;
     }
 
     NameToScriptMap::const_iterator iterator = m_nameToScript.find(name);
@@ -1438,12 +1439,15 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         // deadlocking in this case, just send an error message.
 
         CriticalSectionTryLock lock(m_breakLock);
-        if (lock.IsHeld()) {
-           SendBreakEvent(api, L, 1);
-           SendExceptionEvent(L, message);
-           WaitForContinue();
-        } else {
-           Message(message, MessageType_Error);
+        if (lock.IsHeld()) 
+        {
+            SendBreakEvent(api, L, 1);
+            SendExceptionEvent(L, message);
+            WaitForContinue();
+        } 
+        else 
+        {
+            Message(message, MessageType_Error);
         }
     }
         
