@@ -74,8 +74,8 @@ bool DebugBackend::Script::GetHasBreakPoint(unsigned int line) const
     {
         if(breakpoints[i] == line)
         {
-        return true;
-      }
+            return true;
+        }
     }
     
     return false;
@@ -86,10 +86,10 @@ bool DebugBackend::Script::HasBreakPointInRange(unsigned int start, unsigned int
     
     for (size_t i = 0; i < breakpoints.size(); i++)
     {
-      if(breakpoints[i] >= start && breakpoints[i] < end)
-      {
-        return true;
-      }
+        if(breakpoints[i] >= start && breakpoints[i] < end)
+        {
+            return true;
+        }
     }
     
     return false;
@@ -100,15 +100,15 @@ bool DebugBackend::Script::ToggleBreakpoint(unsigned int line)
 
     std::vector<unsigned int>::iterator result = std::find(breakpoints.begin(), breakpoints.end(), line);
 
-    if(result == breakpoints.end())
+    if (result == breakpoints.end())
     {
-      breakpoints.push_back(line);
-      return true;
+        breakpoints.push_back(line);
+        return true;
     }
     else
     {
-      breakpoints.erase(result);
-      return false;
+        breakpoints.erase(result);
+        return false;
     }
 }
 
@@ -236,11 +236,11 @@ void DebugBackend::Log(const char* fmt, ...)
 
         char buffer[1024];
 
-	    va_list	ap;
+        va_list    ap;
 
-	    va_start(ap, fmt);
+        va_start(ap, fmt);
         _vsnprintf(buffer, 1024, fmt, ap);
-	    va_end(ap);
+        va_end(ap);
 
         fputs(buffer, m_log);
         fflush(m_log);
@@ -651,33 +651,33 @@ int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, 
 int DebugBackend::RegisterScript(lua_State* L, lua_Debug* ar)
 {
 
-  const char* source = NULL;
-  size_t size = 0;
+    const char* source = NULL;
+    size_t size = 0;
   
-  if (ar->source != NULL && ar->source[0] != '@')
-  {
-      source = ar->source;
-      size   = strlen(source);
-  }
+    if (ar->source != NULL && ar->source[0] != '@')
+    {
+        source = ar->source;
+        size   = strlen(source);
+    }
   
-  int scriptIndex = RegisterScript(L, source, size, ar->source, source == NULL);
+    int scriptIndex = RegisterScript(L, source, size, ar->source, source == NULL);
   
-  // We need to exit the critical section before waiting so that we don't
-  // monopolize it. Specifically, ToggleBreakpoint will need it.
-  m_criticalSection.Exit();
+    // We need to exit the critical section before waiting so that we don't
+    // monopolize it. Specifically, ToggleBreakpoint will need it.
+    m_criticalSection.Exit();
   
-  if (scriptIndex != -1)
-  {
-      // Stop execution so that the frontend has an opportunity to send us the break points
-      // before we start executing the first line of the script.
-      WaitForEvent(m_loadEvent);
-  }
+    if (scriptIndex != -1)
+    {
+        // Stop execution so that the frontend has an opportunity to send us the break points
+        // before we start executing the first line of the script.
+        WaitForEvent(m_loadEvent);
+    }
   
-  m_criticalSection.Enter();
+    m_criticalSection.Enter();
   
-  // Since the script indices may have changed while we released the critical section,
+    // Since the script indices may have changed while we released the critical section,
     // require the script index.
-  return GetScriptIndex(ar->source);
+    return GetScriptIndex(ar->source);
 
 }
 
@@ -969,8 +969,8 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
 
         if(functionInfo.linedefined == -1)
         {
-          //ignore c functions
-          continue;
+            //ignore c functions
+            continue;
         }
 
         vm->lastFunctions = functionInfo.source;
@@ -993,7 +993,8 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
 
 unsigned int DebugBackend::GetScriptIndex(const char* name) const
 {
-    if (name == NULL) {
+    if (name == NULL) 
+    {
        return -1;
     }
 
@@ -1443,11 +1444,14 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         // deadlocking in this case, just send an error message.
 
         CriticalSectionTryLock lock(m_breakLock);
-        if (lock.IsHeld()) {
-        SendBreakEvent(api, L, 1);
-        SendExceptionEvent(L, message);
-        WaitForContinue();
-        } else {
+        if (lock.IsHeld()) 
+        {
+           SendBreakEvent(api, L, 1);
+           SendExceptionEvent(L, message);
+           WaitForContinue();
+        } 
+        else 
+        {
            Message(message, MessageType_Error);
         }
     }
@@ -1478,7 +1482,7 @@ bool DebugBackend::GetStartupDirectory(char* path, int maxPathLength)
 
     if (!GetModuleFileName(g_hInstance, path, maxPathLength))
     {
-		return false;
+        return false;
     }
 
     char* lastSlash = strrchr(path, '\\');
@@ -2003,8 +2007,8 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     TiXmlPrinter printer;
     printer.SetIndent("\t");
 
-	document.Accept( &printer );
-	result = printer.Str();
+    document.Accept( &printer );
+    result = printer.Str();
 
     // Reenable the debugger hook
     EnableIntercepts(true);
