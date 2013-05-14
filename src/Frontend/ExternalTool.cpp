@@ -49,6 +49,16 @@ const wxString& ExternalTool::GetCommand() const
     return m_command;
 }
 
+void ExternalTool::SetInitialDirectory(const wxString& initialDirectory)
+{
+    m_initialDirectory = initialDirectory;
+}
+
+const wxString& ExternalTool::GetInitialDirectory() const
+{
+    return m_initialDirectory;
+}
+
 void ExternalTool::SetArguments(const wxString& arguments)
 {
     m_arguments = arguments;
@@ -86,12 +96,25 @@ wxProcess* ExternalTool::Run(const MainFrame* mainFrame) const
     // automatic one called from wxProcess::Open.
     wxLogNull logNo;
 
-    wxString commandLine;
-    commandLine = m_command + " " + m_arguments;
-
-    mainFrame->SubstituteVariableArguments(commandLine);
+    wxString commandLine      = m_command + " " + m_arguments;
+    wxString initialDirectory = m_initialDirectory;
+    mainFrame->SubstituteVariableArguments(commandLine     );
+    mainFrame->SubstituteVariableArguments(initialDirectory);
+    
+    wxString workDirOriginal;
+    if (!initialDirectory.IsEmpty())
+    {
+        workDirOriginal = wxGetCwd();
+        wxSetWorkingDirectory(initialDirectory);
+    }
 
     wxProcess* process = wxProcess::Open(commandLine);
+
+    if (!initialDirectory.IsEmpty())
+    {
+        wxSetWorkingDirectory(workDirOriginal);
+    }
+
     return process;
 
 }

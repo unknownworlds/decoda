@@ -46,6 +46,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "StringHistory.h"
 #include "AutoCompleteManager.h"
 #include "DebugFrontend.h"
+#include "ProcessOutputSink.h"
 
 #include <vector>
 #include <string>
@@ -990,12 +991,6 @@ private:
     void RemoveRunningProcess(wxProcess* process);
 
     /**
-     * Copies the text from the process output stream to the output window. Returns
-     * false if no data was copied.
-     */
-    bool CopyProcessOutputToWindow(wxProcess* process);
-
-    /**
      * Updates the tools menu items based on the current external tools.
      */
     void UpdateToolsMenu();
@@ -1534,6 +1529,7 @@ private:
     bool                            m_startUpMaximized;
 
     AutoCompleteManager             m_autoCompleteManager;
+    ProcessOutputSink               m_processOutputSink;
 
     std::vector<int>                m_tabOrder;
     int                             m_tabOrderIndex;

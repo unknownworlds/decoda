@@ -30,6 +30,7 @@ BEGIN_EVENT_TABLE(ExternalToolsDialog, wxDialog)
     EVT_TEXT(ID_TitleTextBox,               OnTitleTextBoxChanged)
     EVT_TEXT(ID_CommandTextBox,             OnCommandTextBoxChanged)
     EVT_TEXT(ID_ArgumentsTextBox,           OnArgumentsTextBoxChanged)
+    EVT_TEXT(ID_InitialDirectoryTextBox,    OnInitialDirectoryTextBoxChanged)
     EVT_BUTTON(wxID_OK,                     OnOk)
     EVT_BUTTON(ID_ApplyButton,              OnApply)
     EVT_BUTTON(ID_AddButton,                OnAdd)
@@ -38,10 +39,15 @@ BEGIN_EVENT_TABLE(ExternalToolsDialog, wxDialog)
     EVT_BUTTON(ID_MoveDownButton,           OnMoveDown)
     EVT_BUTTON(ID_CommandBrowseButton,      OnCommandBrowse)
     EVT_BUTTON(ID_ArgumentsBrowseButton,    OnArgumentsBrowse)
-    EVT_MENU(ID_ItemPath,                   OnItemPath)
-    EVT_MENU(ID_ItemDirectory,              OnItemDirectory)
-    EVT_MENU(ID_ItemFileName,               OnItemFileName)
-    EVT_MENU(ID_ItemExtension,              OnItemExtension)
+    EVT_BUTTON(ID_InitialDirBrowseButton,   OnInitialDirectoryBrowse)
+    EVT_MENU(ID_ArgumentsItemPath,             OnArgumentsItemPath)
+    EVT_MENU(ID_ArgumentsItemDirectory,        OnArgumentsItemDirectory)
+    EVT_MENU(ID_ArgumentsItemFileName,         OnArgumentsItemFileName)
+    EVT_MENU(ID_ArgumentsItemExtension,        OnArgumentsItemExtension)
+    EVT_MENU(ID_InitialDirectoryItemPath,      OnInitialDirectoryItemPath)
+    EVT_MENU(ID_InitialDirectoryItemDirectory, OnInitialDirectoryItemDirectory)
+    EVT_MENU(ID_InitialDirectoryItemFileName,  OnInitialDirectoryItemFileName)
+    EVT_MENU(ID_InitialDirectoryItemExtension, OnInitialDirectoryItemExtension)
     EVT_CHOICE(ID_EventHook,                OnEventHook)
     EVT_HELP(wxID_ANY,                      OnHelp) 
 END_EVENT_TABLE()
@@ -138,7 +144,7 @@ ExternalToolsDialog::ExternalToolsDialog( wxWindow* parent, int id)
 
 	fgSizer2->Add( fgSizer8, 1, wxEXPAND, 5 );
 
-    /*
+    // Initial directory
 	fgSizer2->Add( new wxStaticText(this, wxID_ANY, wxT("Initial Directory:")), 0, wxALL, 5 );
 	
 	wxFlexGridSizer* fgSizer9;
@@ -149,11 +155,10 @@ ExternalToolsDialog::ExternalToolsDialog( wxWindow* parent, int id)
 	m_initialDirectoryTextBox = new wxTextCtrl( this, ID_InitialDirectoryTextBox);
 	fgSizer9->Add( m_initialDirectoryTextBox, 0, wxALL|wxEXPAND, 5 );
 	
-	m_button11 = new wxButton( this, wxID_ANY, wxT(">"), wxDefaultPosition, wxSize( 25,-1 ), 0 );
-	fgSizer9->Add( m_button11, 0, wxALL, 5 );
+	m_initialDirectoryBrowseButton = new wxButton( this, ID_InitialDirBrowseButton, wxT(">"), wxDefaultPosition, wxSize( 25,-1 ), 0 );
+	fgSizer9->Add( m_initialDirectoryBrowseButton, 0, wxALL, 5 );
 	
 	fgSizer2->Add( fgSizer9, 1, wxEXPAND, 5 );
-    */
 
     // Hook option.
     fgSizer2->Add( new wxStaticText( this, wxID_ANY, wxT("Auto-Execute On Event:")), 0, wxALL, 5 );
@@ -261,6 +266,15 @@ void ExternalToolsDialog::OnArgumentsTextBoxChanged(wxCommandEvent& event)
     if (tool != NULL)
     {
         tool->SetArguments(m_argumentsTextBox->GetValue());
+    }
+}
+
+void ExternalToolsDialog::OnInitialDirectoryTextBoxChanged(wxCommandEvent& event)
+{
+    ExternalTool* tool = GetSelectedTool();
+    if (tool != NULL)
+    {
+        tool->SetInitialDirectory(m_initialDirectoryTextBox->GetValue());
     }
 }
 
@@ -380,34 +394,40 @@ void ExternalToolsDialog::OnArgumentsBrowse(wxCommandEvent& event)
     point.x += m_argumentsBrowseButton->GetSize().x; 
 
     wxMenu menu;
-    menu.Append(ID_ItemPath,        _("Item &Path"));
-    menu.Append(ID_ItemDirectory,   _("&Item Directory"));
-    menu.Append(ID_ItemFileName,    _("Item &File Name"));
-    menu.Append(ID_ItemExtension,   _("Item E&xtension"));
+    menu.Append(ID_ArgumentsItemPath,        _("Item &Path"));
+    menu.Append(ID_ArgumentsItemDirectory,   _("&Item Directory"));
+    menu.Append(ID_ArgumentsItemFileName,    _("Item &File Name"));
+    menu.Append(ID_ArgumentsItemExtension,   _("Item E&xtension"));
     
     PopupMenu(&menu, point);
 
 }
 
-void ExternalToolsDialog::OnItemPath(wxCommandEvent& event)
+void ExternalToolsDialog::OnInitialDirectoryBrowse(wxCommandEvent& event)
 {
-    m_argumentsTextBox->WriteText("$(ItemPath)");
+
+    wxPoint point = m_initialDirectoryBrowseButton->GetPosition();
+    point.x += m_initialDirectoryBrowseButton->GetSize().x; 
+
+    wxMenu menu;
+    menu.Append(ID_InitialDirectoryItemPath,        _("Item &Path"));
+    menu.Append(ID_InitialDirectoryItemDirectory,   _("&Item Directory"));
+    menu.Append(ID_InitialDirectoryItemFileName,    _("Item &File Name"));
+    menu.Append(ID_InitialDirectoryItemExtension,   _("Item E&xtension"));
+    
+    PopupMenu(&menu, point);
+
 }
 
-void ExternalToolsDialog::OnItemDirectory(wxCommandEvent& event)
-{
-    m_argumentsTextBox->WriteText("$(ItemDir)");
-}
+void ExternalToolsDialog::OnArgumentsItemPath     (wxCommandEvent& event) { m_argumentsTextBox->WriteText("$(ItemPath)"    ); }
+void ExternalToolsDialog::OnArgumentsItemDirectory(wxCommandEvent& event) { m_argumentsTextBox->WriteText("$(ItemDir)"     ); }
+void ExternalToolsDialog::OnArgumentsItemFileName (wxCommandEvent& event) { m_argumentsTextBox->WriteText("$(ItemFileName)"); }
+void ExternalToolsDialog::OnArgumentsItemExtension(wxCommandEvent& event) { m_argumentsTextBox->WriteText("$(ItemExt)"     ); }
 
-void ExternalToolsDialog::OnItemFileName(wxCommandEvent& event)
-{
-    m_argumentsTextBox->WriteText("$(ItemFileName)");
-}
-
-void ExternalToolsDialog::OnItemExtension(wxCommandEvent& event)
-{
-    m_argumentsTextBox->WriteText("$(ItemExt)");
-}
+void ExternalToolsDialog::OnInitialDirectoryItemPath     (wxCommandEvent& event) { m_initialDirectoryTextBox->WriteText("$(ItemPath)"    ); }
+void ExternalToolsDialog::OnInitialDirectoryItemDirectory(wxCommandEvent& event) { m_initialDirectoryTextBox->WriteText("$(ItemDir)"     ); }
+void ExternalToolsDialog::OnInitialDirectoryItemFileName (wxCommandEvent& event) { m_initialDirectoryTextBox->WriteText("$(ItemFileName)"); }
+void ExternalToolsDialog::OnInitialDirectoryItemExtension(wxCommandEvent& event) { m_initialDirectoryTextBox->WriteText("$(ItemExt)"     ); }
 
 void ExternalToolsDialog::OnEventHook(wxCommandEvent& event)
 {
@@ -426,13 +446,9 @@ void ExternalToolsDialog::UpdateControlsForSelection(int selectedItem)
         const ExternalTool* tool = m_workingTools[selectedItem];
         
         m_titleTextBox->SetValue(tool->GetTitle());
-        m_titleTextBox->Enable(true);
-        
         m_commandTextBox->SetValue(tool->GetCommand());
-        m_commandTextBox->Enable(true);
-
         m_argumentsTextBox->SetValue(tool->GetArguments());
-        m_argumentsTextBox->Enable(true);
+        m_initialDirectoryTextBox->SetValue(tool->GetInitialDirectory());
 
         int selectionIndex = 0;
         int numEventTypes = sizeof(m_externalEvents) / sizeof(wxString);
@@ -445,29 +461,24 @@ void ExternalToolsDialog::UpdateControlsForSelection(int selectedItem)
             }
         }
         m_eventHookList->SetSelection(selectionIndex);
-        m_eventHookList->Enable(true);
-
     }
     else
     {
-    
         m_titleTextBox->Clear();
-        m_titleTextBox->Enable(false);
-        
         m_commandTextBox->Clear();
-        m_commandTextBox->Enable(false);
-
         m_argumentsTextBox->Clear();
-        m_argumentsTextBox->Enable(false);
-
+        m_initialDirectoryTextBox->Clear();
         m_eventHookList->SetSelection(0);
-        m_eventHookList->Enable(false);
-    
     }
-
-    m_commandBrowseButton->Enable(selectedItem != -1);
-    m_argumentsBrowseButton->Enable(selectedItem != -1);
-
+    
+    m_titleTextBox                ->Enable(selectedItem != -1);
+    m_commandTextBox              ->Enable(selectedItem != -1);
+    m_argumentsTextBox            ->Enable(selectedItem != -1);
+    m_initialDirectoryTextBox     ->Enable(selectedItem != -1);
+    m_eventHookList               ->Enable(selectedItem != -1);
+    m_commandBrowseButton         ->Enable(selectedItem != -1);
+    m_argumentsBrowseButton       ->Enable(selectedItem != -1);
+    m_initialDirectoryBrowseButton->Enable(selectedItem != -1);
 }
 
 ExternalTool* ExternalToolsDialog::GetSelectedTool()
