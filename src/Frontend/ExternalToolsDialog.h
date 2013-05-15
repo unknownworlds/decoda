@@ -79,6 +79,11 @@ public:
     void OnArgumentsTextBoxChanged(wxCommandEvent& event);
 
     /**
+     * Called when the user changes the text in the initial directory text box.
+     */
+    void OnInitialDirectoryTextBoxChanged(wxCommandEvent& event);
+
+    /**
      * Called when the user clicks the Ok button.
      */
     void OnOk(wxCommandEvent& event);
@@ -119,24 +124,49 @@ public:
     void OnArgumentsBrowse(wxCommandEvent& event);
 
     /**
-     * Called when the user selects Item Path from the popup menu.
+     * Called when the user clicks the > button next to the initial directory box.
      */
-    void OnItemPath(wxCommandEvent& event);
+    void OnInitialDirectoryBrowse(wxCommandEvent& event);
 
     /**
-     * Called when the user selects Item Directory from the popup menu.
+     * Called when the user selects Item Path from the popup menu for arguments.
      */
-    void OnItemDirectory(wxCommandEvent& event);
+    void OnArgumentsItemPath(wxCommandEvent& event);
 
     /**
-     * Called when the user selects Item File Name from the popup menu.
+     * Called when the user selects Item Directory from the popup menu for arguments.
      */
-    void OnItemFileName(wxCommandEvent& event);
+    void OnArgumentsItemDirectory(wxCommandEvent& event);
 
     /**
-     * Called when the user selects Item Extension from the popup menu.
+     * Called when the user selects Item File Name from the popup menu for arguments.
      */
-    void OnItemExtension(wxCommandEvent& event);
+    void OnArgumentsItemFileName(wxCommandEvent& event);
+
+    /**
+     * Called when the user selects Item Extension from the popup menu for arguments.
+     */
+    void OnArgumentsItemExtension(wxCommandEvent& event);
+
+    /**
+     * Called when the user selects Item Path from the popup menu for the initial directory.
+     */
+    void OnInitialDirectoryItemPath(wxCommandEvent& event);
+
+    /**
+     * Called when the user selects Item Directory from the popup menu for the initial directory.
+     */
+    void OnInitialDirectoryItemDirectory(wxCommandEvent& event);
+
+    /**
+     * Called when the user selects Item File Name from the popup menu for the initial directory.
+     */
+    void OnInitialDirectoryItemFileName(wxCommandEvent& event);
+
+    /**
+     * Called when the user selects Item Extension from the popup menu for the initial directory.
+     */
+    void OnInitialDirectoryItemExtension(wxCommandEvent& event);
 
     /**
      * Called when the user selects an event to hook into from the list box.
@@ -178,6 +208,7 @@ private:
         ID_TitleTextBox,
         ID_CommandTextBox,
         ID_ArgumentsTextBox,
+        ID_InitialDirectoryTextBox,
         ID_ApplyButton,
         ID_AddButton,
         ID_DeleteButton,
@@ -185,10 +216,15 @@ private:
         ID_MoveDownButton,
         ID_CommandBrowseButton,
         ID_ArgumentsBrowseButton,
-        ID_ItemPath,
-        ID_ItemDirectory,
-        ID_ItemFileName,
-        ID_ItemExtension,
+        ID_InitialDirBrowseButton,
+        ID_ArgumentsItemPath,
+        ID_ArgumentsItemDirectory,
+        ID_ArgumentsItemFileName,
+        ID_ArgumentsItemExtension,
+        ID_InitialDirectoryItemPath,
+        ID_InitialDirectoryItemDirectory,
+        ID_InitialDirectoryItemFileName,
+        ID_InitialDirectoryItemExtension,
         ID_EventHook,
     };
 
@@ -204,7 +240,7 @@ private:
 	wxButton*           m_argumentsBrowseButton;
     wxChoice*           m_eventHookList;
 	wxTextCtrl*         m_initialDirectoryTextBox;
-	wxButton*           m_button11;
+	wxButton*           m_initialDirectoryBrowseButton;
 	wxButton*           m_button12;
 	wxButton*           m_button13;
     wxButton*           m_button14;

@@ -71,6 +71,16 @@ public:
     const wxString& GetCommand() const;
 
     /**
+     * Sets the initial working directory for the tool.
+     */
+    void SetInitialDirectory(const wxString& initialDirectory);
+
+    /**
+     * Returns the initial working directory for the tool.
+     */
+    const wxString& GetInitialDirectory() const;
+
+    /**
      * Sets the arguments that will be supplied to the application when it's
      * executed. This can contain embedded environment variables (i.e $(...)).
      */
