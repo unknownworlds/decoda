@@ -434,7 +434,7 @@ Project::File* Project::GetFileForFileName(const wxFileName& fileName) const
 
     for (unsigned int i = 0; i < m_files.size(); ++i)
     {
-		if (m_files[i]->fileName.SameAs(fileName))
+        if (m_files[i]->fileName.GetFullName().CmpNoCase(fileName.GetFullName()) == 0)
         {
             return m_files[i];
         }
