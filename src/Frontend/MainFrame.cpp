@@ -784,10 +784,13 @@ void MainFrame::SetProject(Project* project)
     
     UpdateCaption();
 
-    m_waitForFinalSymbolParse = true;
-    m_projectExplorer->SetProject(m_project);
-    m_statusBar->SetStatusText("Loading Symbols", 0);
-    m_symbolParser->SetProject(m_project);
+	if (!m_project->GetFileName().IsEmpty())
+	{
+		m_waitForFinalSymbolParse = true;
+		m_statusBar->SetStatusText("Loading Symbols", 0);
+	}
+	m_projectExplorer->SetProject(m_project);
+	m_symbolParser->SetProject(m_project);
     m_breakpointsWindow->SetProject(m_project);
 
     m_autoCompleteManager.BuildFromProject(project);
