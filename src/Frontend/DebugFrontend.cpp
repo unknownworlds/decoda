@@ -740,6 +740,15 @@ void DebugFrontend::ToggleBreakpoint(unsigned int vm, unsigned int scriptIndex, 
 
 }
 
+void DebugFrontend::RemoveAllBreakPoints(unsigned int vm)
+{
+
+    m_commandChannel.WriteUInt32(CommandId_DeleteAllBreakpoints);
+    m_commandChannel.WriteUInt32(0);
+    m_commandChannel.Flush();
+
+}
+
 DebugFrontend::Script* DebugFrontend::GetScript(unsigned int scriptIndex)
 {
     CriticalSectionLock lock(m_criticalSection);

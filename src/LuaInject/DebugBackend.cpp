@@ -332,6 +332,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
     vm->breakpointInStack   = true;// Force the stack tobe checked when the first script is entered
+    vm->haveActiveBreakpoints = false;
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -1094,6 +1095,9 @@ void DebugBackend::CommandThreadProc()
             case CommandId_StepInto:
                 StepInto();
                 break;
+            case CommandId_DeleteAllBreakpoints:
+                DeleteAllBreakpoints();
+                break;
             case CommandId_ToggleBreakpoint:
                 {
                     
@@ -1172,6 +1176,18 @@ DWORD WINAPI DebugBackend::StaticCommandThreadProc(LPVOID param)
     return 0;
 }
 
+void DebugBackend::ActiveLuaHookInAllVms()
+{
+    StateToVmMap::iterator end = m_stateToVm.end();
+
+    for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
+    {
+      VirtualMachine* vm = it->second;
+      //May have issues with L not being the currently running thread
+      SetHookMode(vm->api, vm->L, HookMode_Full);
+    }
+}
+
 void DebugBackend::StepInto()
 {
     
@@ -1185,6 +1201,7 @@ void DebugBackend::StepInto()
     m_mode = Mode_StepInto;
     SetEvent(m_stepEvent);
 
+    ActiveLuaHookInAllVms();
 }
 
 void DebugBackend::StepOver()
@@ -1199,6 +1216,8 @@ void DebugBackend::StepOver()
 
     m_mode = Mode_StepOver;
     SetEvent(m_stepEvent);
+
+    ActiveLuaHookInAllVms();
 }
 
 
@@ -1220,6 +1239,7 @@ void DebugBackend::Continue()
 void DebugBackend::Break()
 {
     m_mode = Mode_StepInto;
+    ActiveLuaHookInAllVms();
 }
 
 void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsigned int line)
@@ -1253,6 +1273,10 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
         
         bool breakpointSet = script->ToggleBreakpoint(line);
 
+        if(breakpointSet){
+          BreakpointsActiveForScript(scriptIndex);
+        }
+
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
         m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));  
@@ -1263,6 +1287,41 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
     
     }
 
+}
+
+void DebugBackend::BreakpointsActiveForScript(int scriptIndex){
+
+  StateToVmMap::iterator end = m_stateToVm.end();
+
+  bool needsHookSet = false;
+
+  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
+  {
+      if(!it->second->haveActiveBreakpoints){
+          it->second->haveActiveBreakpoints = true;
+          needsHookSet = true;
+      }
+  }
+
+  if(needsHookSet)
+  {
+      ActiveLuaHookInAllVms();
+  }
+}
+
+void DebugBackend::DeleteAllBreakpoints(){
+
+  for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+  {
+      (*it)->breakpoints.clear();
+  }
+
+  //Set all haveActiveBreakpoints for the vms back to false we leave to the hook being called for the vm
+  //to auto unhook itself
+  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+  {
+      it->second->haveActiveBreakpoints = false;
+  }
 }
 
 void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
@@ -1454,6 +1513,7 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         {
            Message(message, MessageType_Error);
         }
+
     }
         
     // Try invoking the user specified error function.
@@ -2013,6 +2073,8 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     // Reenable the debugger hook
     EnableIntercepts(true);
     SetHookMode(api, L, HookMode_Full);
+    if(GetVm(L)->haveActiveBreakpoints || m_mode == Mode_StepInto || m_mode == Mode_StepOver){
+    }
 
     int t2 = lua_gettop_dll(api, L);
     assert(t1 == t2);
