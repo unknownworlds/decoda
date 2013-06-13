@@ -4861,11 +4861,7 @@ void MainFrame::DeleteAllBreakpoints()
 
         }
 
-        if (scriptIndex == -1)
-        {
-            m_project->DeleteAllBreakpoints(file);
-        }
-
+        m_project->DeleteAllBreakpoints(file);
     }
 
     DebugFrontend::Get().RemoveAllBreakPoints(0);
