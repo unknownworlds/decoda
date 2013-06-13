@@ -4850,22 +4850,6 @@ void MainFrame::DeleteAllBreakpoints()
 
             unsigned int newLine = file->breakpoints[breakpointIndex];
 
-            if (scriptIndex != -1)
-            {
-                
-                // Make from old lines to new lines in case the user has changed the file.
-                unsigned int oldLine = NewToOldLine(file, newLine);
-
-                // If the line exists in the backend, set it through the debugger. Otherwise
-                // we'll just set it "locally".
-                if (oldLine != LineMapper::s_invalidLine)
-                {
-                    DebugFrontend::Get().ToggleBreakpoint(m_vm, scriptIndex, oldLine);
-                    continue;
-                }
-
-            }
-
             // This file does not have a counterpart in the script debugger, so just
             // set the break point "locally". When the debugger encounters the file
             // we'll send it the break points.
@@ -4883,6 +4867,8 @@ void MainFrame::DeleteAllBreakpoints()
         }
 
     }
+
+    DebugFrontend::Get().RemoveAllBreakPoints(0);
 
     m_breakpointsWindow->UpdateBreakpoints();
 
