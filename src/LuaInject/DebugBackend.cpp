@@ -789,7 +789,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     {
         if(GetHookMode(api, L) != HookMode_Full)
         {
-          SetHookMode(api, L, HookMode_Full);
+            SetHookMode(api, L, HookMode_Full);
         }
         
         //Force UpdateHookMode to recheck the call stack for functions with breakpoints when switching back to Mode_Continue
@@ -940,6 +940,11 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     }
 
     HookMode currentMode = GetHookMode(api, L);
+
+    if(!vm->haveActiveBreakpoints)
+    {
+        mode = HookMode_None;
+    }
 
     if(currentMode != mode)
     {
@@ -1268,8 +1273,20 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
         
         bool breakpointSet = script->ToggleBreakpoint(line);
 
-        if(breakpointSet){
-          BreakpointsActiveForScript(scriptIndex);
+        if(breakpointSet)
+        {
+            BreakpointsActiveForScript(scriptIndex);
+        }
+        else
+        {
+            //Check to see if this was the last active breakpoint set if so switch back to fast mode
+            if(!GetHaveActiveBreakpoints())
+            {
+                for(StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+                {
+                    it->second->haveActiveBreakpoints = false;
+                }
+            }
         }
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
@@ -1284,39 +1301,51 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
 }
 
-void DebugBackend::BreakpointsActiveForScript(int scriptIndex){
+void DebugBackend::BreakpointsActiveForScript(int scriptIndex)
+{
+    //TODO this per VM
+    SetHaveActiveBreakpoints(true);
+}
 
-  StateToVmMap::iterator end = m_stateToVm.end();
+bool DebugBackend::GetHaveActiveBreakpoints(){
 
-  bool needsHookSet = false;
+    for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+    {
+        if((*it)->HasBreakpointsActive())
+        {
+            return true;
+        } 
+    }
 
-  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
-  {
-      if(!it->second->haveActiveBreakpoints){
-          it->second->haveActiveBreakpoints = true;
-          needsHookSet = true;
-      }
-  }
+    return false;
+}
 
-  if(needsHookSet)
-  {
-      ActiveLuaHookInAllVms();
-  }
+void DebugBackend::SetHaveActiveBreakpoints(bool breakpointsActive)
+{
+
+    //m_HookLock.Enter();
+
+    for(StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+    {
+        it->second->haveActiveBreakpoints = breakpointsActive;
+    }
+  
+    //We defer to UpdateHookMode to turn off the hook fully
+    if(breakpointsActive)
+    {
+        ActiveLuaHookInAllVms();
+    }
 }
 
 void DebugBackend::DeleteAllBreakpoints(){
 
-  for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
-  {
-      (*it)->breakpoints.clear();
-  }
+    for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+    {
+        (*it)->breakpoints.clear();
+    }
 
-  //Set all haveActiveBreakpoints for the vms back to false we leave to the hook being called for the vm
-  //to auto unhook itself
-  for (StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
-  {
-      it->second->haveActiveBreakpoints = false;
-  }
+    //Set all haveActiveBreakpoints for the vms back to false we leave to the hook being called for the vm
+    SetHaveActiveBreakpoints(false);
 }
 
 void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)

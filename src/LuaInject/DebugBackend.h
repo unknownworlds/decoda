@@ -158,6 +158,13 @@ public:
     
     void BreakpointsActiveForScript(int scriptIndex);
     
+    /**
+     * Returns whether any loaded script still have any breakpoints set
+     */
+    bool GetHaveActiveBreakpoints();
+
+    void SetHaveActiveBreakpoints(bool breakpointsActive);
+
     void DeleteAllBreakpoints();
     /**
      * Calls the function on the top of the stack in a protected environment that
