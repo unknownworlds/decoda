@@ -405,6 +405,8 @@ private:
         bool            initialized;
         int             callCount;
         int             callStackDepth;
+        int             lastStepLine;
+        int             lastStepScript;
         unsigned long   api;
         std::string     name;
         unsigned int    stackTop;
