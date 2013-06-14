@@ -328,6 +328,8 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->initialized         = false;
     vm->callCount           = 0;
     vm->callStackDepth      = 0;
+    vm->lastStepLine        = -2;
+    vm->lastStepScript      = -1;
     vm->api                 = api;
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
@@ -806,16 +808,32 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         const char* arsource = GetSource(api, ar);
         int scriptIndex = GetScriptIndex(arsource);
 
+        if (scriptIndex == -1)
+        {
+            
+          // This isn't a script we've seen before, so tell the debugger about it.
+          scriptIndex = RegisterScript(L, ar);
+        }
+
         bool stop = false;
+        bool onLastStepLine = false;
+
+        //Keep updating onLastStepLine even if the mode is Mode_Continue if were still on the same line so we don't trigger
+        if (vm->luaJitWorkAround)
+        {    
+            int stackDepth = GetStackDepth(api, L);   
+
+            //We will get multiple line events for the same line in LuaJIT if there are only calls to C functions on the line 
+            if (vm->lastStepLine == ar->currentline)
+            {
+                onLastStepLine = vm->lastStepScript == scriptIndex && vm->callStackDepth != 0 && stackDepth == vm->callStackDepth;
+            }
 
         // If we're stepping on each line or we just stepped out of a function that
         // we were stepping over, break.
-
-        if (vm->luaJitWorkAround)
-        {
             if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
             {
-                if (GetStackDepth(api, L) < vm->callStackDepth)
+                if (stackDepth < vm->callStackDepth || (stackDepth == vm->callStackDepth && !onLastStepLine))
                 {
                     // We've returned to the level when the function was called.
                     vm->callCount       = 0;   
@@ -824,25 +842,19 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
             }
         }
 
-        if (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0))
-        {
-            stop = true;
-        }
-
-        if (scriptIndex == -1)
-        {
-            
-          // This isn't a script we've seen before, so tell the debugger about it.
-          scriptIndex = RegisterScript(L, ar);
-        }
-
         if (scriptIndex != -1)
         {
             // Check to see if we're on a breakpoint and should break.
-            if (m_scripts[scriptIndex]->GetHasBreakPoint(GetCurrentLine(api, ar) - 1))
+            if (!onLastStepLine && m_scripts[scriptIndex]->GetHasBreakPoint(ar->currentline - 1))
             {
                 stop = true;
             }
+        }
+
+        //Break if were doing some kind of stepping 
+        if (!onLastStepLine && (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0)))
+        {
+            stop = true;
         }
        
         // We need to exit the critical section before waiting so that we don't
@@ -852,6 +864,13 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (stop)
         {
             BreakFromScript(api, L);
+            
+            if(vm->luaJitWorkAround)
+            {
+                vm->callStackDepth = GetStackDepth(api, L);
+                vm->lastStepLine = ar->currentline;
+                vm->lastStepScript = scriptIndex;
+            }
         }
 
     }
@@ -860,30 +879,18 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (m_mode == Mode_StepOver)
         {
             if (GetIsHookEventRet( api, arevent)) // only LUA_HOOKRET for Lua 5.2, can also be LUA_HOOKTAILRET for older versions
-        {
+            {
                 if (vm->callCount > 0)
-            {
-                --vm->callCount;
-            }
-        }
-            else if (GetIsHookEventCall( api, arevent))  // only LUA_HOOKCALL for Lua 5.1 and before, can also be LUA_HOOKTAILCALL for newer versions
-        {
-                // if we are running Lua > 5.1, LUA_HOOKRET won't be emitted after a LUA_HOOKTAILCALL, so simply ignore it in that case
-            if( arevent == LUA_HOOKCALL)
-            {
-                ++vm->callCount;
-                }
-
-                // LuaJIT doesn't give us LUA_HOOKRET calls when we exit from
-                // C functions, so instead we use the stack depth.
-                if (vm->luaJitWorkAround && vm->callStackDepth == 0)
                 {
-                    lua_getinfo_dll(api, L, "S", ar);
-                    const char* arwhat = GetWhat(api, ar);
-                    if (arwhat != NULL && arwhat[0] == 'C')
-                    {
-                        vm->callStackDepth = GetStackDepth(api, L);
-                    }
+                    --vm->callCount;
+                }
+            }
+            else if (GetIsHookEventCall( api, arevent))  // only LUA_HOOKCALL for Lua 5.1 and before, can also be LUA_HOOKTAILCALL for newer versions
+            {
+                // if we are running Lua > 5.1, LUA_HOOKRET won't be emitted after a LUA_HOOKTAILCALL, so simply ignore it in that case
+                if( arevent == LUA_HOOKCALL)
+                {
+                    ++vm->callCount;
                 }
             }
         }
@@ -1001,7 +1008,7 @@ unsigned int DebugBackend::GetScriptIndex(const char* name) const
 {
     if (name == NULL) 
     {
-       return -1;
+        return -1;
     }
 
     NameToScriptMap::const_iterator iterator = m_nameToScript.find(name);
@@ -1534,13 +1541,13 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         CriticalSectionTryLock lock(m_breakLock);
         if (lock.IsHeld()) 
         {
-           SendBreakEvent(api, L, 1);
-           SendExceptionEvent(L, message);
-           WaitForContinue();
+            SendBreakEvent(api, L, 1);
+            SendExceptionEvent(L, message);
+            WaitForContinue();
         } 
         else 
         {
-           Message(message, MessageType_Error);
+            Message(message, MessageType_Error);
         }
 
     }
