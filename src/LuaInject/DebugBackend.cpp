@@ -328,10 +328,13 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->initialized         = false;
     vm->callCount           = 0;
     vm->callStackDepth      = 0;
+    vm->lastStepLine        = -2;
+    vm->lastStepScript      = -1;
     vm->api                 = api;
     vm->stackTop            = 0;
     vm->luaJitWorkAround    = false;
     vm->breakpointInStack   = true;// Force the stack tobe checked when the first script is entered
+    vm->haveActiveBreakpoints = false;
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -788,7 +791,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     {
         if(GetHookMode(api, L) != HookMode_Full)
         {
-          SetHookMode(api, L, HookMode_Full);
+            SetHookMode(api, L, HookMode_Full);
         }
         
         //Force UpdateHookMode to recheck the call stack for functions with breakpoints when switching back to Mode_Continue
@@ -803,16 +806,32 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
         int scriptIndex = GetScriptIndex(ar->source);
 
-        bool stop = false;
-
-        // If we're stepping on each line or we just stepped out of a function that
-        // we were stepping over, break.
-
-        if (vm->luaJitWorkAround)
+        if (scriptIndex == -1)
         {
+            
+          // This isn't a script we've seen before, so tell the debugger about it.
+          scriptIndex = RegisterScript(L, ar);
+        }
+
+        bool stop = false;
+        bool onLastStepLine = false;
+
+        //Keep updating onLastStepLine even if the mode is Mode_Continue if were still on the same line so we don't trigger
+        if (vm->luaJitWorkAround)
+        {    
+            int stackDepth = GetStackDepth(api, L);   
+
+            //We will get multiple line events for the same line in LuaJIT if there are only calls to C functions on the line 
+            if (vm->lastStepLine == ar->currentline)
+            {
+                onLastStepLine = vm->lastStepScript == scriptIndex && vm->callStackDepth != 0 && stackDepth == vm->callStackDepth;
+            }
+            
+            // If we're stepping on each line or we just stepped out of a function that
+            // we were stepping over, break.
             if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
             {
-                if (GetStackDepth(api, L) < vm->callStackDepth)
+                if (stackDepth < vm->callStackDepth || (stackDepth == vm->callStackDepth && !onLastStepLine))
                 {
                     // We've returned to the level when the function was called.
                     vm->callCount       = 0;   
@@ -821,25 +840,19 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
             }
         }
 
-        if (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0))
-        {
-            stop = true;
-        }
-
-        if (scriptIndex == -1)
-        {
-            
-          // This isn't a script we've seen before, so tell the debugger about it.
-          scriptIndex = RegisterScript(L, ar);
-        }
-
         if (scriptIndex != -1)
         {
             // Check to see if we're on a breakpoint and should break.
-            if (m_scripts[scriptIndex]->GetHasBreakPoint(ar->currentline - 1))
+            if (!onLastStepLine && m_scripts[scriptIndex]->GetHasBreakPoint(ar->currentline - 1))
             {
                 stop = true;
             }
+        } 
+        
+        //Break if were doing some kind of stepping 
+        if (!onLastStepLine && (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0)))
+        {
+            stop = true;
         }
        
         // We need to exit the critical section before waiting so that we don't
@@ -849,13 +862,21 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (stop)
         {
             BreakFromScript(api, L);
+            
+            if(vm->luaJitWorkAround)
+            {
+                vm->callStackDepth = GetStackDepth(api, L);
+                vm->lastStepLine = ar->currentline;
+                vm->lastStepScript = scriptIndex;
+            }
         }
 
     }
     else
     {
+
         if (ar->event == LUA_HOOKRET || ar->event == LUA_HOOKTAILRET)
-        {
+        {          
             if (m_mode == Mode_StepOver && vm->callCount > 0)
             {
                 --vm->callCount;
@@ -865,20 +886,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         {
             if (m_mode == Mode_StepOver)
             {
-
                 ++vm->callCount;
-
-                // LuaJIT doesn't give us LUA_HOOKRET calls when we exit from
-                // C functions, so instead we use the stack depth.
-                if (vm->luaJitWorkAround && vm->callStackDepth == 0)
-                {
-                    lua_getinfo_dll(api, L, "S", ar);
-                    if (ar->what != NULL && ar->what[0] == 'C')
-                    {
-                        vm->callStackDepth = GetStackDepth(api, L);
-                    }
-                }
-
             }
         }
 
@@ -940,14 +948,19 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
 
     HookMode currentMode = GetHookMode(api, L);
 
+    if(!vm->haveActiveBreakpoints)
+    {
+        mode = HookMode_None;
+    }
+
     if(currentMode != mode)
     {
         //Always switch to Full hook mode when stepping
         if(m_mode != Mode_Continue)
         {
-          mode = HookMode_Full;
+            mode = HookMode_Full;
         }
-
+        
         SetHookMode(api, L, mode);
     }
 }
@@ -1089,6 +1102,9 @@ void DebugBackend::CommandThreadProc()
             case CommandId_StepInto:
                 StepInto();
                 break;
+            case CommandId_DeleteAllBreakpoints:
+                DeleteAllBreakpoints();
+                break;
             case CommandId_ToggleBreakpoint:
                 {
                     
@@ -1167,6 +1183,18 @@ DWORD WINAPI DebugBackend::StaticCommandThreadProc(LPVOID param)
     return 0;
 }
 
+void DebugBackend::ActiveLuaHookInAllVms()
+{
+    StateToVmMap::iterator end = m_stateToVm.end();
+
+    for (StateToVmMap::iterator it = m_stateToVm.begin(); it != end; it++)
+    {
+      VirtualMachine* vm = it->second;
+      //May have issues with L not being the currently running thread
+      SetHookMode(vm->api, vm->L, HookMode_Full);
+    }
+}
+
 void DebugBackend::StepInto()
 {
     
@@ -1180,6 +1208,7 @@ void DebugBackend::StepInto()
     m_mode = Mode_StepInto;
     SetEvent(m_stepEvent);
 
+    ActiveLuaHookInAllVms();
 }
 
 void DebugBackend::StepOver()
@@ -1194,6 +1223,8 @@ void DebugBackend::StepOver()
 
     m_mode = Mode_StepOver;
     SetEvent(m_stepEvent);
+
+    ActiveLuaHookInAllVms();
 }
 
 
@@ -1215,6 +1246,7 @@ void DebugBackend::Continue()
 void DebugBackend::Break()
 {
     m_mode = Mode_StepInto;
+    ActiveLuaHookInAllVms();
 }
 
 void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsigned int line)
@@ -1248,6 +1280,22 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
         
         bool breakpointSet = script->ToggleBreakpoint(line);
 
+        if(breakpointSet)
+        {
+            BreakpointsActiveForScript(scriptIndex);
+        }
+        else
+        {
+            //Check to see if this was the last active breakpoint set if so switch back to fast mode
+            if(!GetHaveActiveBreakpoints())
+            {
+                for(StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+                {
+                    it->second->haveActiveBreakpoints = false;
+                }
+            }
+        }
+
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
         m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));  
@@ -1258,6 +1306,53 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
     
     }
 
+}
+
+void DebugBackend::BreakpointsActiveForScript(int scriptIndex)
+{
+    //TODO this per VM
+    SetHaveActiveBreakpoints(true);
+}
+
+bool DebugBackend::GetHaveActiveBreakpoints(){
+
+    for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+    {
+        if((*it)->HasBreakpointsActive())
+        {
+            return true;
+        } 
+    }
+
+    return false;
+}
+
+void DebugBackend::SetHaveActiveBreakpoints(bool breakpointsActive)
+{
+
+    //m_HookLock.Enter();
+
+    for(StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
+    {
+        it->second->haveActiveBreakpoints = breakpointsActive;
+    }
+  
+    //We defer to UpdateHookMode to turn off the hook fully
+    if(breakpointsActive)
+    {
+        ActiveLuaHookInAllVms();
+    }
+}
+
+void DebugBackend::DeleteAllBreakpoints(){
+
+    for(std::vector<Script*>::iterator it = m_scripts.begin(); it != m_scripts.end(); it++)
+    {
+        (*it)->breakpoints.clear();
+    }
+
+    //Set all haveActiveBreakpoints for the vms back to false we leave to the hook being called for the vm
+    SetHaveActiveBreakpoints(false);
 }
 
 void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
@@ -1449,6 +1544,7 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         {
             Message(message, MessageType_Error);
         }
+
     }
         
     // Try invoking the user specified error function.
@@ -2008,6 +2104,8 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     // Reenable the debugger hook
     EnableIntercepts(true);
     SetHookMode(api, L, HookMode_Full);
+    if(GetVm(L)->haveActiveBreakpoints || m_mode == Mode_StepInto || m_mode == Mode_StepOver){
+    }
 
     int t2 = lua_gettop_dll(api, L);
     assert(t1 == t2);
