@@ -543,7 +543,7 @@ private:
      * Creates a call stack that unifies the native call stack and the script
      * call stack.
      */
-    unsigned int GetUnifiedStack(const StackEntry nativeStack[], unsigned int nativeStackSize,
+    unsigned int GetUnifiedStack(unsigned long api, const StackEntry nativeStack[], unsigned int nativeStackSize,
         const lua_Debug scriptStack[], unsigned int scriptStackSize,
         StackEntry unifiedStack[]);
 
