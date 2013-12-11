@@ -607,11 +607,11 @@ void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
 {
 
   if(mode == HookMode_None)
-    {
+  {
       lua_sethook_dll(api, L, NULL, 0, 0);
-    }
-    else
-    {
+  }
+  else
+  {
       int mask;
 
       switch (mode)
@@ -628,7 +628,7 @@ void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
       }
 
       lua_sethook_dll(api, L, g_interfaces[api].HookHandler, mask, 0);
-    }
+  }
 
   
 }
@@ -665,7 +665,7 @@ HookMode GetHookMode(unsigned long api, lua_State* L)
   else
   {
     return HookMode_Full;
-  }
+  }  
 }
 
 

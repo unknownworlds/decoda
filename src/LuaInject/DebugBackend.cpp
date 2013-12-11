@@ -828,9 +828,9 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
             {
                 onLastStepLine = vm->lastStepScript == scriptIndex && vm->callStackDepth != 0 && stackDepth == vm->callStackDepth;
             }
-
-        // If we're stepping on each line or we just stepped out of a function that
-        // we were stepping over, break.
+            
+            // If we're stepping on each line or we just stepped out of a function that
+            // we were stepping over, break.
             if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
             {
                 if (stackDepth < vm->callStackDepth || (stackDepth == vm->callStackDepth && !onLastStepLine))
@@ -845,12 +845,12 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (scriptIndex != -1)
         {
             // Check to see if we're on a breakpoint and should break.
-            if (!onLastStepLine && m_scripts[scriptIndex]->GetHasBreakPoint(ar->currentline - 1))
+            if (!onLastStepLine && m_scripts[scriptIndex]->GetHasBreakPoint(GetCurrentLine(api, ar) - 1))
             {
                 stop = true;
             }
-        }
-
+        } 
+        
         //Break if were doing some kind of stepping 
         if (!onLastStepLine && (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0)))
         {
@@ -868,7 +868,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
             if(vm->luaJitWorkAround)
             {
                 vm->callStackDepth = GetStackDepth(api, L);
-                vm->lastStepLine = ar->currentline;
+                vm->lastStepLine = GetCurrentLine(api, ar);
                 vm->lastStepScript = scriptIndex;
             }
         }
@@ -879,20 +879,19 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (m_mode == Mode_StepOver)
         {
             if (GetIsHookEventRet( api, arevent)) // only LUA_HOOKRET for Lua 5.2, can also be LUA_HOOKTAILRET for older versions
-            {
+        {          
                 if (vm->callCount > 0)
-                {
-                    --vm->callCount;
-                }
-            }
-            else if (GetIsHookEventCall( api, arevent))  // only LUA_HOOKCALL for Lua 5.1 and before, can also be LUA_HOOKTAILCALL for newer versions
             {
-                // if we are running Lua > 5.1, LUA_HOOKRET won't be emitted after a LUA_HOOKTAILCALL, so simply ignore it in that case
-                if( arevent == LUA_HOOKCALL)
-                {
-                    ++vm->callCount;
-                }
+                --vm->callCount;
             }
+        }
+        else if (ar->event == LUA_HOOKCALL)
+        {
+            if (m_mode == Mode_StepOver)
+            {
+                ++vm->callCount;
+            }
+        }
         }
 
         m_criticalSection.Exit(); 
@@ -925,6 +924,11 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
         {
             RegisterScript(L, hookEvent);
             scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
+                // if we are running Lua > 5.1, LUA_HOOKRET won't be emitted after a LUA_HOOKTAILCALL, so simply ignore it in that case
+                if( arevent == LUA_HOOKCALL)
+                {
+                    ++vm->callCount;
+                }
         }
         
         Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
@@ -963,9 +967,9 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
         //Always switch to Full hook mode when stepping
         if(m_mode != Mode_Continue)
         {
-          mode = HookMode_Full;
+            mode = HookMode_Full;
         }
-
+        
         SetHookMode(api, L, mode);
     }
 }
@@ -1004,7 +1008,7 @@ bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
     return false;            
 }
 
-unsigned int DebugBackend::GetScriptIndex(const char* name) const
+int DebugBackend::GetScriptIndex(const char* name) const
 {
     if (name == NULL) 
     {
@@ -3250,7 +3254,7 @@ unsigned int DebugBackend::GetUnifiedStack(unsigned long api, const StackEntry n
                 }
             }
 
-            if (strcmp(arwhat, "C") == 0)
+            if (arwhat != NULL && strcmp(arwhat, "C") == 0)
             {
                 --scriptPos;
                 break;
