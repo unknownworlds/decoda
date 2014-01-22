@@ -3292,6 +3292,13 @@ void LoadSymbolsRecursively(std::set<std::string>& loadedModules, stdext::hash_m
 
         char moduleFileName[_MAX_PATH];
         GetModuleFileNameEx(hProcess, hModule, moduleFileName, _MAX_PATH);
+
+        char buf[MAX_PATH];
+        if (strstr(moduleFileName, "lua") == NULL) {
+           sprintf(buf, "skipping symbol search for %s", moduleFileName);
+           OutputDebugString(buf);
+           return;
+        }
         
         DWORD64 base = SymLoadModule64_dll(hProcess, NULL, moduleFileName, moduleName, (DWORD64)moduleInfo.lpBaseOfDll, moduleInfo.SizeOfImage);
 
