@@ -52,6 +52,13 @@ private:
     struct VirtualMachine;
 
 public:
+    /**
+     * Static version of the error handler that just forwards to the non-static
+     * version.
+     */
+    static int StaticErrorHandler(lua_State* L);
+
+public:
 
     /**
      * Singleton accessor.
@@ -79,6 +86,11 @@ public:
     VirtualMachine* AttachState(unsigned long api, lua_State* L);
 
     /**
+     * Sets thread parent/child relationships.
+     */
+    void SetParentState(unsigned long api, lua_State* child, lua_State* parent);
+
+    /**
      * Detaches the debugger from the state.
      */
     void DetachState(unsigned long api, lua_State* L);
@@ -102,13 +114,13 @@ public:
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step into the function call.
      */
-    void StepInto();
+    void StepInto(lua_State* L);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step over the function call.
      */
-    void StepOver();
+    void StepOver(lua_State* L);
 
     /**
      * Continues execution until a breakpoint is hit.
@@ -119,7 +131,7 @@ public:
      * Breaks execution of the script on the next line executed.
      * thread.
      */
-    void Break();
+    void Break(lua_State *L);
 
     /**
      * Evalates the expression. If there was an error evaluating the expression the
@@ -279,12 +291,6 @@ private:
     int ErrorHandler(unsigned long api, lua_State* L);
 
     /**
-     * Static version of the error handler that just forwards to the non-static
-     * version.
-     */
-    static int StaticErrorHandler(lua_State* L);
-
-    /**
      * Sends a break event to the frontend. The stack will be treated is if it
      * starts at the stackTop entry so that frames on the top of the stack can
      * be skipped. This is usful when the current execution point is an error
@@ -379,6 +385,7 @@ private:
         bool            initialized;
         int             callCount;
         int             callStackDepth;
+        int             currentStackDepth;
         unsigned long   api;
         std::string     name;
         unsigned int    stackTop;
@@ -547,10 +554,13 @@ private:
         const lua_Debug scriptStack[], unsigned int scriptStackSize,
         StackEntry unifiedStack[]);
 
+    void SetSteppingVm(lua_State* L);
+
 private:
 
     typedef stdext::hash_map<lua_State*, VirtualMachine*>   StateToVmMap;
     typedef stdext::hash_map<std::string, unsigned int>     NameToScriptMap;
+    typedef stdext::hash_map<lua_State*, lua_State*>        StateParentMap;
 
     static DebugBackend*            s_instance;
     static const unsigned int       s_maxStackSize  = 100;
@@ -558,6 +568,7 @@ private:
     FILE*                           m_log;
 
     Mode                            m_mode;
+    std::string                     m_stepVmName;
     HANDLE                          m_stepEvent;
     HANDLE                          m_loadEvent;
     HANDLE                          m_detachEvent;
@@ -576,6 +587,8 @@ private:
     std::list<ClassInfo>            m_classInfos;
     std::vector<VirtualMachine*>    m_vms;
     StateToVmMap                    m_stateToVm;
+    StateParentMap                  m_stateParent;
+    lua_State*                      m_currentThread;
     
     mutable CriticalSection         m_exceptionCriticalSection; // Controls access to ignoreExceptions 
     stdext::hash_set<std::string>   m_ignoreExceptions;

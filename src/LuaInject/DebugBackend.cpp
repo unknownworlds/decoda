@@ -100,6 +100,7 @@ DebugBackend::DebugBackend()
     m_mode                  = Mode_Continue;
     m_log                   = NULL;
     m_warnedAboutUserData   = false;
+    m_currentThread         = NULL;
 }
 
 DebugBackend::~DebugBackend()
@@ -254,15 +255,43 @@ bool DebugBackend::Initialize(HINSTANCE hInstance)
 
 }
 
+void DebugBackend::SetParentState(unsigned long api, lua_State* child, lua_State* parent)
+{
+   if (!GetIsAttached())
+   {
+      return;
+   }
+
+   CriticalSectionLock lock1(m_criticalSection);
+
+   // If there's already a parent wired up for this child, don't change it
+   if (m_stateParent.find(child) != m_stateParent.end()) {
+      return;
+   }
+
+   // walk up a virtual stack as if we were to create this relationship.  if we find
+   // a loop, don't wire it up.
+   lua_State *current = parent;
+   while (current) {
+      if (current == child) {
+         return;
+      }
+      auto i = m_stateParent.find(current);
+      current = (i != m_stateParent.end() ? i->second : nullptr);
+   }
+
+   m_stateParent[child] = parent;
+}
+
 DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_State* L)
 {
-
     if (!GetIsAttached())
     {
         return NULL;
     }
 
     CriticalSectionLock lock(m_criticalSection);
+
 
     // Check if the virtual machine is aleady in our list. This happens
     // if we're attaching this virtual machine implicitly through lua_call
@@ -284,6 +313,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->callStackDepth      = 0;
     vm->api                 = api;
     vm->stackTop            = 0;
+    vm->currentStackDepth   = 0;
     vm->luaJitWorkAround    = false;
     
     m_vms.push_back(vm);
@@ -672,7 +702,6 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         lua_pop_dll(api, L, 1);
 
         vm->initialized = true;
-
     }
 
     // Get the name of the VM. Polling like this is pretty excessive since the
@@ -701,6 +730,10 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
     if (ar->event == LUA_HOOKLINE)
     {
+        if (m_currentThread && m_currentThread != L) {
+            SetParentState(api, L, m_currentThread);
+        }
+        m_currentThread = L;
 
         // Fill in the rest of the structure.
         lua_getinfo_dll(api, L, "Sl", ar);
@@ -709,25 +742,27 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
         bool stop = false;
 
-        // If we're stepping on each line or we just stepped out of a function that
-        // we were stepping over, break.
+        if (m_stepVmName.empty() || vm->name == m_stepVmName) {
+           // If we're stepping on each line or we just stepped out of a function that
+           // we were stepping over, break.
 
-        if (vm->luaJitWorkAround)
-        {
-            if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
-            {
-                if (GetStackDepth(api, L) < vm->callStackDepth)
-                {
-                    // We've returned to the level when the function was called.
-                    vm->callCount       = 0;   
-                    vm->callStackDepth  = 0;
-                }
-            }
-        }
+           if (vm->luaJitWorkAround)
+           {
+               if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
+               {
+                   if (GetStackDepth(api, L) < vm->callStackDepth)
+                   {
+                       // We've returned to the level when the function was called.
+                       vm->callCount       = 0;   
+                       vm->callStackDepth  = 0;
+                   }
+               }
+           }
 
-        if (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0))
-        {
-            stop = true;
+           if (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0))
+           {
+               stop = true;
+           }
         }
 
         if (scriptIndex == -1)
@@ -788,6 +823,8 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     {
         if (ar->event == LUA_HOOKRET || ar->event == LUA_HOOKTAILRET)
         {
+            --vm->currentStackDepth;
+
             if (m_mode == Mode_StepOver && vm->callCount > 0)
             {
                 --vm->callCount;
@@ -795,6 +832,8 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         }
         else if (ar->event == LUA_HOOKCALL)
         {
+            ++vm->currentStackDepth;
+
             if (m_mode == Mode_StepOver)
             {
 
@@ -917,10 +956,10 @@ void DebugBackend::CommandThreadProc()
                 Continue();
                 break;
             case CommandId_StepOver:
-                StepOver();
+                StepOver(L);
                 break;
             case CommandId_StepInto:
-                StepInto();
+                StepInto(L);
                 break;
             case CommandId_ToggleBreakpoint:
                 {
@@ -936,7 +975,7 @@ void DebugBackend::CommandThreadProc()
                 }
                 break;
             case CommandId_Break:
-                Break();
+                Break(L);
                 break;
             case CommandId_Evaluate:
                 {
@@ -1000,11 +1039,13 @@ DWORD WINAPI DebugBackend::StaticCommandThreadProc(LPVOID param)
     return 0;
 }
 
-void DebugBackend::StepInto()
+void DebugBackend::StepInto(lua_State* L)
 {
     
     CriticalSectionLock lock(m_criticalSection);
-    
+
+    SetSteppingVm(L);
+   
     for (unsigned int i = 0; i < m_vms.size(); ++i)
     {
         m_vms[i]->callCount = 0;
@@ -1015,11 +1056,27 @@ void DebugBackend::StepInto()
 
 }
 
-void DebugBackend::StepOver()
+void DebugBackend::SetSteppingVm(lua_State* L)
+{
+    m_stepVmName.clear();
+    StateToVmMap::const_iterator i = m_stateToVm.find(L);
+    if (i != m_stateToVm.end()) {
+       int api = i->second->api;
+       lua_rawgetglobal_dll(api, L, "decoda_name");
+       const char* name = lua_tostring_dll(api, L, -1);
+       if (name) {
+          m_stepVmName = name;
+       }
+    }
+}
+
+void DebugBackend::StepOver(lua_State* L)
 {
 
     CriticalSectionLock lock(m_criticalSection);
-    
+
+    SetSteppingVm(L);
+
     for (unsigned int i = 0; i < m_vms.size(); ++i)
     {
         m_vms[i]->callCount = 0;
@@ -1045,8 +1102,9 @@ void DebugBackend::Continue()
 
 }
 
-void DebugBackend::Break()
+void DebugBackend::Break(lua_State* L)
 {
+    SetSteppingVm(L);
     m_mode = Mode_StepInto;
 }
 
@@ -1148,10 +1206,16 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
     lua_Debug scriptStack[s_maxStackSize];
     unsigned int scriptStackSize = 0;
 
-    for (int level = stackTop; scriptStackSize < s_maxStackSize && lua_getstack_dll(api, L, level, &scriptStack[scriptStackSize]); ++level)
-    {
-        lua_getinfo_dll(api, L, "nSlu", &scriptStack[scriptStackSize]);
-        ++scriptStackSize;
+    lua_State* currentThread = L;
+
+    while (currentThread) {
+       for (int level = stackTop; scriptStackSize < s_maxStackSize && lua_getstack_dll(api, currentThread, level, &scriptStack[scriptStackSize]); ++level)
+       {
+           lua_getinfo_dll(api, currentThread, "nSlu", &scriptStack[scriptStackSize]);
+           ++scriptStackSize;
+       }
+       StateParentMap::iterator i = m_stateParent.find(currentThread);
+       currentThread = i != m_stateParent.end() ? i->second : NULL;
     }
 
     // Create a unified call stack.
@@ -1367,6 +1431,7 @@ bool DebugBackend::CreateEnvironment(unsigned long api, lua_State* L, int stackL
     {
         return false;
     }
+    lua_getinfo_dll(api, L, "nSlu", &stackEntry);
 
     const char* name = NULL;
 
@@ -1690,19 +1755,35 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
             
     // Adjust the desired stack level based on the number of stack levels we skipped when
     // we sent the front end the call stack.
+    lua_State* currentThread = L;
 
     {
 
         CriticalSectionLock lock(m_criticalSection);
+        
+        // find the right thread to peer into
+        while (true) {
+           StateToVmMap::iterator stateIterator = m_stateToVm.find(L);
+           assert(stateIterator != m_stateToVm.end());
 
-        StateToVmMap::iterator stateIterator = m_stateToVm.find(L);
-        assert(stateIterator != m_stateToVm.end());
-
-        if (stateIterator != m_stateToVm.end())
-        {
-            stackLevel += stateIterator->second->stackTop;
+           if (stateIterator == m_stateToVm.end()) {
+              // Just hope for the best!
+              break;
+           }
+           VirtualMachine *vm = stateIterator->second;
+        
+           stackLevel += vm->stackTop; // xxx: not sure why this is here?
+           if (stackLevel < vm->currentStackDepth) {
+              break;
+           }
+           StateParentMap::iterator parentIterator = m_stateParent.find(L);
+           if (parentIterator == m_stateParent.end()) {
+              // Continue hoping for the best...
+              break;
+           }
+           L = parentIterator->second;
+           stackLevel -= vm->currentStackDepth;
         }
-    
     }
 
     int t1 = lua_gettop_dll(api, L);
@@ -2916,23 +2997,36 @@ unsigned int DebugBackend::GetUnifiedStack(const StackEntry nativeStack[], unsig
 
     unsigned int stackSize = 0;
 
+    // remove the C stack at the base of the lua stack (if it exists)
+    if (scriptPos >= 0) {
+       const char* what = scriptStack[scriptPos].what;
+       if (what != NULL && strcmp(what, "C") == 0) {
+          scriptPos--;
+       }
+    }
+
+    bool compressNativeStack = false;
     while (stackSize < s_maxStackSize && scriptPos >= 0)
     {
 
         // Walk up the native stack until we hit a transition into Lua.
         while (nativePos >= 0)
         {
-            if (strcmp(nativeStack[nativePos].name, "lua_pcall") == 0)
+            const char* fn = nativeStack[nativePos].name;
+            if (strcmp(fn, "lua_pcall") == 0 || strcmp(fn, "lua_resume") == 0)
             {
-                --nativePos;
+                if (compressNativeStack) {
+                   stack[stackSize++] = nativeStack[nativePos--];
+                }
                 break;
             }
             if (strncmp(nativeStack[nativePos].name, "luaD_", 5) != 0 &&
                 strncmp(nativeStack[nativePos].name, "luaV_", 5) != 0 &&
                 strncmp(nativeStack[nativePos].name, "lua_", 4)  != 0)
             {
-                stack[stackSize] = nativeStack[nativePos];
-                ++stackSize;
+                if (!compressNativeStack) {
+                   stack[stackSize++] = nativeStack[nativePos];
+                }
             }
             --nativePos;
         }
@@ -2971,7 +3065,7 @@ unsigned int DebugBackend::GetUnifiedStack(const StackEntry nativeStack[], unsig
             --scriptPos;
   
         }
-
+        compressNativeStack = true;
     }
 
     return stackSize;
