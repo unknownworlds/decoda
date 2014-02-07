@@ -31,6 +31,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "res/functionicon.xpm"
 #include "res/classicon.xpm"
 
+#include <algorithm>
+
 BEGIN_EVENT_TABLE( CodeEdit, wxScintilla )
 
     EVT_LEAVE_WINDOW(               CodeEdit::OnMouseLeave)

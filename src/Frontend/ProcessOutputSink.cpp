@@ -5,6 +5,7 @@
 #include "ProcessOutputSink.h"
 #include "OutputWindow.h"
 
+#include <algorithm>
 
 #ifndef LENGTH_OF
     #define LENGTH_OF(a) (sizeof(a) / sizeof(*a))
