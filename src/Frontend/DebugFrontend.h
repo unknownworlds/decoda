@@ -153,6 +153,11 @@ public:
      * Toggles a breakpoint on the specified line.
      */
     void ToggleBreakpoint(unsigned int vm, unsigned int scriptIndex, unsigned int line);
+    
+    /**
+     * Removes all breakpoints set this will also disable the line hook if the debug mode is set to continue
+     */
+    void RemoveAllBreakPoints(unsigned int vm);
 
     /**
      * Returns the specified script.

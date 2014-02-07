@@ -66,6 +66,7 @@ enum CommandId
     CommandId_PatchDeleteLine   = 11,   // Deletes a line of code.
     CommandId_LoadDone          = 12,   // Signals to the backend that the frontend has finished processing a load.
     CommandId_IgnoreException   = 13,   // Instructs the backend to ignore the specified exception message in the future.
+    CommandId_DeleteAllBreakpoints = 14,// Instructs the backend to clear all breakpoints set
 };
 
 #endif
