@@ -23,6 +23,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "LineMapper.h"
 #include "Tokenizer.h"
 
+#include <algorithm>
+
 void LineMapper::Update(const std::string& oldCode, const std::string& newCode)
 {
 
