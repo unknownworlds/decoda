@@ -7,8 +7,8 @@ BUILDING
 Decoda is built from premake4 project files. premake4 can be downloaded from
 http://industriousone.com/premake/download
 
-Decoda has only been tested with the vs2005 target, however it may be possible
-to compile Decoda with newer versions. It is not currently possible to build
+Decoda has only been tested with the vs2013 target, however it may be possible
+to compile Decoda with older versions. It is not currently possible to build
 Decoda as a 64-bit executable or a non-Windows application.
 
 LICENSE
