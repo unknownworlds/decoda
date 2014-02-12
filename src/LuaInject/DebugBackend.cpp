@@ -2010,7 +2010,33 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
 
     if (strcmp(typeName, "table") == 0)
     {
-        node = GetTableAsText(api, L, -1, maxDepth - 1, typeNameOverride);         
+        int stackStart = lua_gettop_dll(api, L);
+        int result = 0;
+        std::string className;
+        if (CallMetaMethod(api, L, stackStart, "__towatch", LUA_MULTRET, result))
+        {
+            if (result == 0)
+            {
+                int numResults = lua_gettop_dll(api, L) - stackStart;
+
+                if (numResults > 1)
+                {
+                    // First result is the class name if multiple results are 
+                    // returned.
+                    className = lua_tostring_dll(api, L, -numResults);
+                }
+
+                node = GetValueAsText(api, L, -1, maxDepth, className.c_str(), displayAsKey);
+
+                // Remove the table value.
+                lua_pop_dll(api, L, numResults);
+
+            }
+        }
+        if( node == NULL)
+        {
+            node = GetTableAsText(api, L, -1, maxDepth - 1, typeNameOverride);
+        }
         // Remove the duplicated value.
         lua_pop_dll(api, L, 1);
     }
