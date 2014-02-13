@@ -2019,7 +2019,12 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
             {
                 int numResults = lua_gettop_dll(api, L) - stackStart;
 
-                if (numResults > 1)
+                if( numResults == 0)
+                {
+                    lua_pushnil_dll( api, L);
+                    numResults = 1;
+                }
+                else if (numResults > 1)
                 {
                     // First result is the class name if multiple results are 
                     // returned.
@@ -2156,7 +2161,13 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
                         int tableIndex = lua_gettop_dll(api, L);
                         int numResults = tableIndex - stackStart;
 
-                        if (numResults > 1)
+                        if( numResults == 0)
+                        {
+                            lua_pushnil_dll( api, L);
+                            ++ tableIndex;
+                            numResults = 1;
+                        }
+                        else if (numResults > 1)
                         {
                             // First result is the class name if multiple results are 
                             // returned.
