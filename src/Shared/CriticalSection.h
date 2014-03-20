@@ -23,6 +23,9 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef CRITICAL_SECTION_H
 #define CRITICAL_SECTION_H
 
+#ifndef _WIN32_WINNT 
+#define _WIN32_WINNT 0x400
+#endif
 #include <windows.h>
 
 /**
@@ -54,6 +57,14 @@ public:
      * Releases ownership of the critical section.
      */
     void Exit();
+
+    /**
+     * Tries to obtain ownership of the critical section.  If another thread
+     * is currently holding the critical section, the method will return
+     * false without acquiring it.  If the critical section is not being
+     * held, this behaves exactly as Enter()
+     */
+    bool TryEnter();
 
 private:
 

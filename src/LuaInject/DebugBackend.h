@@ -52,6 +52,13 @@ private:
     struct VirtualMachine;
 
 public:
+    /**
+     * Static version of the error handler that just forwards to the non-static
+     * version.
+     */
+    static int StaticErrorHandler(lua_State* L);
+
+public:
 
     /**
      * Singleton accessor.
@@ -79,6 +86,11 @@ public:
     VirtualMachine* AttachState(unsigned long api, lua_State* L);
 
     /**
+     * Sets thread parent/child relationships.
+     */
+    void SetParentState(unsigned long api, lua_State* child, lua_State* parent);
+
+    /**
      * Detaches the debugger from the state.
      */
     void DetachState(unsigned long api, lua_State* L);
@@ -96,19 +108,21 @@ public:
      * was not available for the script. This should be set if the script was encountered
      * through a call other than the load function.
      */
-    unsigned int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+    int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+
+    int RegisterScript(lua_State* L, lua_Debug* ar);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step into the function call.
      */
-    void StepInto();
+    void StepInto(lua_State* L);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step over the function call.
      */
-    void StepOver();
+    void StepOver(lua_State* L);
 
     /**
      * Continues execution until a breakpoint is hit.
@@ -119,7 +133,7 @@ public:
      * Breaks execution of the script on the next line executed.
      * thread.
      */
-    void Break();
+    void Break(lua_State *L);
 
     /**
      * Evalates the expression. If there was an error evaluating the expression the
@@ -161,7 +175,9 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    int GetScriptIndex(const char* name) const;
+
+    bool StackHasBreakpoint(unsigned long api, lua_State* L);
 
     /**
      * Returns the class name associated with the metatable index. This makes
@@ -185,6 +201,11 @@ public:
      * Sends a text message to the front end.
      */
     void Message(const char* message, MessageType type = MessageType_Normal);
+
+    /**
+     * Enable/disables stopping execution on errors
+     */
+    void BreakOnError(bool enabled);
 
     /**
      * Ignores the specified exception whenever it occurs.
@@ -225,10 +246,18 @@ private:
          */
         bool GetHasBreakPoint(unsigned int line) const;
         
+        bool HasBreakPointInRange(unsigned int start, unsigned int end) const;
+
+        bool ToggleBreakpoint(unsigned int line);
+
+        bool HasBreakpointsActive();
+
+        void ClearBreakpoints();
+
         std::string                 name;
         std::string                 source;
         std::string                 title;
-        std::vector<bool>           breakpoints;    // True for the indices of lines that have breakpoints.
+        std::vector<unsigned int>   breakpoints;    // Lines that have breakpoints on them.
         std::vector<unsigned int>   validLines;     // Lines that can have breakpoints on them.
 
     };
@@ -277,12 +306,6 @@ private:
      * Error handling call back for relaying exceptions.
      */
     int ErrorHandler(unsigned long api, lua_State* L);
-
-    /**
-     * Static version of the error handler that just forwards to the non-static
-     * version.
-     */
-    static int StaticErrorHandler(lua_State* L);
 
     /**
      * Sends a break event to the frontend. The stack will be treated is if it
@@ -379,10 +402,13 @@ private:
         bool            initialized;
         int             callCount;
         int             callStackDepth;
+        int             currentStackDepth;
         unsigned long   api;
         std::string     name;
         unsigned int    stackTop;
         bool            luaJitWorkAround;
+        bool            breakpointInStack;
+        std::string     lastFunctions;
     };
 
     struct StackEntry
@@ -509,6 +535,8 @@ private:
      */
     void LogHookEvent(unsigned long api, lua_State* L, lua_Debug* ar);
 
+    void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
+
     /**
      * Calls the named meta-method for the specified value. If the value does
      * not have a meta-table or the named meta-method, the function returns false.
@@ -547,17 +575,22 @@ private:
         const lua_Debug scriptStack[], unsigned int scriptStackSize,
         StackEntry unifiedStack[]);
 
+    void SetSteppingVm(lua_State* L);
+
 private:
 
     typedef stdext::hash_map<lua_State*, VirtualMachine*>   StateToVmMap;
     typedef stdext::hash_map<std::string, unsigned int>     NameToScriptMap;
+    typedef stdext::hash_map<lua_State*, lua_State*>        StateParentMap;
 
     static DebugBackend*            s_instance;
-    static const unsigned int       s_maxStackSize  = 100;
+    static const unsigned int       s_maxStackSize  = 200;
 
     FILE*                           m_log;
 
+    bool                            m_breakOnError;
     Mode                            m_mode;
+    std::string                     m_stepVmName;
     HANDLE                          m_stepEvent;
     HANDLE                          m_loadEvent;
     HANDLE                          m_detachEvent;
@@ -576,6 +609,8 @@ private:
     std::list<ClassInfo>            m_classInfos;
     std::vector<VirtualMachine*>    m_vms;
     StateToVmMap                    m_stateToVm;
+    StateParentMap                  m_stateParent;
+    lua_State*                      m_currentThread;
     
     mutable CriticalSection         m_exceptionCriticalSection; // Controls access to ignoreExceptions 
     stdext::hash_set<std::string>   m_ignoreExceptions;

@@ -146,17 +146,21 @@ bool Channel::Write(const void* buffer, unsigned int length)
 
     if (result == FALSE)
     {
-        // Wait for the operation to complete so that we don't need to keep around
-        // the buffer.
-        WaitForSingleObject(m_readEvent, INFINITE);
+        DWORD error = GetLastError();
 
-        DWORD numBytesWritten = 0;
-
-        if (GetOverlappedResult(m_pipe, &overlapped, &numBytesWritten, FALSE))
+        if (error == ERROR_IO_PENDING)
         {
-            result = (numBytesWritten == length);
-        }    
-    
+           // Wait for the operation to complete so that we don't need to keep around
+           // the buffer.
+           WaitForSingleObject(m_readEvent, INFINITE);
+
+           DWORD numBytesWritten = 0;
+
+           if (GetOverlappedResult(m_pipe, &overlapped, &numBytesWritten, FALSE))
+           {
+               result = (numBytesWritten == length);
+           }
+        }
     }
 
     return result == TRUE;

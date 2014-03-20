@@ -107,7 +107,7 @@
 #endif
 
 #if !defined __WXWINCE__ && !defined NEED_PBT_H
-    #include <pbt.h>
+    //#include <pbt.h>
 #endif
 
 #if defined(__WXWINCE__)
