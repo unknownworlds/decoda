@@ -23,6 +23,9 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef CRITICAL_SECTION_H
 #define CRITICAL_SECTION_H
 
+#ifndef _WIN32_WINNT 
+#define _WIN32_WINNT 0x400
+#endif
 #include <windows.h>
 
 /**

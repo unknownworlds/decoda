@@ -69,11 +69,57 @@ const char* MemoryReader(lua_State* L, void* data, size_t* size)
 
 bool DebugBackend::Script::GetHasBreakPoint(unsigned int line) const
 {
-    if (line < breakpoints.size())
+    
+    for (size_t i = 0; i < breakpoints.size(); i++)
     {
-        return breakpoints[line];
+        if(breakpoints[i] == line)
+        {
+            return true;
+        }
     }
+    
     return false;
+}
+
+bool DebugBackend::Script::HasBreakPointInRange(unsigned int start, unsigned int end) const
+{
+    
+    for (size_t i = 0; i < breakpoints.size(); i++)
+    {
+        if(breakpoints[i] >= start && breakpoints[i] < end)
+        {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+bool DebugBackend::Script::ToggleBreakpoint(unsigned int line)
+{
+
+    std::vector<unsigned int>::iterator result = std::find(breakpoints.begin(), breakpoints.end(), line);
+
+    if (result == breakpoints.end())
+    {
+        breakpoints.push_back(line);
+        return true;
+    }
+    else
+    {
+        breakpoints.erase(result);
+        return false;
+    }
+}
+
+void DebugBackend::Script::ClearBreakpoints()
+{
+    breakpoints.resize(0);
+}
+
+bool DebugBackend::Script::HasBreakpointsActive()
+{
+  return breakpoints.size() != 0;
 }
 
 DebugBackend& DebugBackend::Get()
@@ -101,6 +147,7 @@ DebugBackend::DebugBackend()
     m_log                   = NULL;
     m_warnedAboutUserData   = false;
     m_currentThread         = NULL;
+    m_breakOnError          = true;
 }
 
 DebugBackend::~DebugBackend()
@@ -191,11 +238,11 @@ void DebugBackend::Log(const char* fmt, ...)
 
         char buffer[1024];
 
-	    va_list	ap;
+        va_list    ap;
 
-	    va_start(ap, fmt);
+        va_start(ap, fmt);
         _vsnprintf(buffer, 1024, fmt, ap);
-	    va_end(ap);
+        va_end(ap);
 
         fputs(buffer, m_log);
         fflush(m_log);
@@ -315,6 +362,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     vm->stackTop            = 0;
     vm->currentStackDepth   = 0;
     vm->luaJitWorkAround    = false;
+    vm->breakpointInStack   = true;// Force the stack tobe checked when the first script is entered
     
     m_vms.push_back(vm);
     m_stateToVm.insert(std::make_pair(L, vm));
@@ -332,7 +380,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
     RegisterDebugLibrary(api, L);
 
     // Start debugging on this VM.
-    SetHookEnabled(api, L, true);
+    SetHookMode(api, L, HookMode_Full);
 
     // This state may be a thread which will be garbage collected, so we need to register
     // to recieve notification when it is destroyed.
@@ -500,7 +548,7 @@ int DebugBackend::PostLoadScript(unsigned long api, int result, lua_State* L, co
 
 }
 
-unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
+int DebugBackend::RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable)
 {
 
     CriticalSectionLock lock(m_criticalSection);
@@ -631,6 +679,39 @@ unsigned int DebugBackend::RegisterScript(lua_State* L, const char* source, size
 
 }
 
+int DebugBackend::RegisterScript(lua_State* L, lua_Debug* ar)
+{
+
+    const char* source = NULL;
+    size_t size = 0;
+  
+    if (ar->source != NULL && ar->source[0] != '@')
+    {
+        source = ar->source;
+        size   = strlen(source);
+    }
+  
+    int scriptIndex = RegisterScript(L, source, size, ar->source, source == NULL);
+  
+    // We need to exit the critical section before waiting so that we don't
+    // monopolize it. Specifically, ToggleBreakpoint will need it.
+    m_criticalSection.Exit();
+  
+    if (scriptIndex != -1)
+    {
+        // Stop execution so that the frontend has an opportunity to send us the break points
+        // before we start executing the first line of the script.
+        WaitForEvent(m_loadEvent);
+    }
+  
+    m_criticalSection.Enter();
+  
+    // Since the script indices may have changed while we released the critical section,
+    // require the script index.
+    return GetScriptIndex(ar->source);
+
+}
+
 void DebugBackend::Message(const char* message, MessageType type)
 {
     // Send a message.
@@ -640,6 +721,12 @@ void DebugBackend::Message(const char* message, MessageType type)
     m_eventChannel.WriteString(message);
     m_eventChannel.Flush();
 }
+
+void DebugBackend::BreakOnError(bool enabled)
+{
+   m_breakOnError = enabled;
+}
+
 
 void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 {
@@ -728,6 +815,22 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
     // Log for debugging.
     //LogHookEvent(api, L, ar);
 
+    //Only try to downgrade the hook when the debugger is not stepping   
+    if(m_mode == Mode_Continue)
+    {
+        UpdateHookMode(api, L, ar);
+    }
+    else
+    {
+        if(GetHookMode(api, L) != HookMode_Full)
+        {
+          SetHookMode(api, L, HookMode_Full);
+        }
+        
+        //Force UpdateHookMode to recheck the call stack for functions with breakpoints when switching back to Mode_Continue
+        vm->breakpointInStack = true;
+    }
+
     if (ar->event == LUA_HOOKLINE)
     {
         if (m_currentThread && m_currentThread != L) {
@@ -738,7 +841,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         // Fill in the rest of the structure.
         lua_getinfo_dll(api, L, "Sl", ar);
 
-        unsigned int scriptIndex = GetScriptIndex(ar->source);
+        int scriptIndex = GetScriptIndex(ar->source);
 
         bool stop = false;
 
@@ -768,36 +871,8 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (scriptIndex == -1)
         {
             
-            // This isn't a script we've seen before, so tell the debugger about it.
-
-            const char* source = NULL;
-            size_t size = 0;
-
-            if (ar->source != NULL && ar->source[0] != '@')
-            {
-                source = ar->source;
-                size   = strlen(source);
-            }
-
-            scriptIndex = RegisterScript(L, source, size, ar->source, source == NULL);
-
-            // We need to exit the critical section before waiting so that we don't
-            // monopolize it. Specifically, ToggleBreakpoint will need it.
-            m_criticalSection.Exit();
-
-            if (scriptIndex != -1)
-            {
-                // Stop execution so that the frontend has an opportunity to send us the break points
-                // before we start executing the first line of the script.
-                WaitForEvent(m_loadEvent);
-            }
-
-            m_criticalSection.Enter();
-            
-            // Since the script indices may have changed while we released the critical section,
-            // reaquire the script index.
-            scriptIndex = GetScriptIndex(ar->source);
-
+          // This isn't a script we've seen before, so tell the debugger about it.
+          scriptIndex = RegisterScript(L, ar);
         }
 
         if (scriptIndex != -1)
@@ -852,17 +927,116 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
             }
         }
-        
+
         m_criticalSection.Exit(); 
     
     }
 
 }
 
-unsigned int DebugBackend::GetScriptIndex(const char* name) const
+void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent)
 {
-    if (name == NULL) {
-       return -1;
+    //Only update the hook mode for call or return hook events 
+    if(hookEvent->event == LUA_HOOKLINE)
+    {
+        return;
+    } 
+    
+    VirtualMachine* vm = GetVm(L);
+    HookMode mode = HookMode_CallsOnly;
+
+    // Populate the line number and source name debug fields
+    lua_getinfo_dll(api, L, "S", hookEvent);
+
+    if(hookEvent->event == LUA_HOOKCALL && hookEvent->linedefined != -1)
+    {
+        vm->lastFunctions = hookEvent->source;
+        
+        int scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
+        
+        if(scriptIndex == -1)
+        {
+            RegisterScript(L, hookEvent);
+            scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
+        }
+        
+        Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
+
+        if(script != NULL && (script->HasBreakPointInRange(hookEvent->linedefined, hookEvent->lastlinedefined) ||
+           //Check if the function is the top level chunk of a script because they always have there lastlinedefined set to 0                  
+           (script->HasBreakpointsActive() && hookEvent->linedefined == 0 && hookEvent->lastlinedefined == 0)))
+        {
+            mode = HookMode_Full;
+            vm->breakpointInStack = true;
+        }
+    }
+
+    //Keep the hook in Full mode while theres a function in the stack somewhere that has a breakpoint in it
+    if(mode != HookMode_Full && vm->breakpointInStack)
+    {
+      if(StackHasBreakpoint(api, L))
+      {
+          mode = HookMode_Full;
+      }
+      else
+      {
+          vm->breakpointInStack = false;
+      }
+    }
+
+    HookMode currentMode = GetHookMode(api, L);
+
+    if(currentMode != mode)
+    {
+        //Always switch to Full hook mode when stepping
+        if(m_mode != Mode_Continue)
+        {
+          mode = HookMode_Full;
+        }
+
+        SetHookMode(api, L, mode);
+    }
+}
+
+bool DebugBackend::StackHasBreakpoint(unsigned long api, lua_State* L)
+{
+    
+    lua_Debug functionInfo;
+    VirtualMachine* vm = GetVm(L);
+
+    for(int stackIndex = 0; lua_getstack_dll(api, L, stackIndex, &functionInfo) ;stackIndex++)
+    {
+        lua_getinfo_dll(api, L, "S", &functionInfo);
+
+        if(functionInfo.linedefined == -1)
+        {
+            //ignore c functions
+            continue;
+        }
+
+        vm->lastFunctions = functionInfo.source;
+
+        int scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
+        
+        Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
+
+        if(script != NULL && (script->HasBreakPointInRange(functionInfo.linedefined, functionInfo.lastlinedefined) ||
+           //Check if the function is the top level chunk of a source file                       
+           (script->HasBreakpointsActive() && functionInfo.linedefined == 0 && functionInfo.lastlinedefined == 0)))
+        {
+            return true;
+        }
+
+    }
+
+    return false;            
+}
+
+int DebugBackend::GetScriptIndex(const char* name) const
+{
+    if (name == NULL) 
+    {
+        return -1;
     }
 
     NameToScriptMap::const_iterator iterator = m_nameToScript.find(name);
@@ -914,7 +1088,7 @@ void DebugBackend::CommandThreadProc()
 
             for (unsigned int i = 0; i < m_vms.size(); ++i)
             {
-                SetHookEnabled(m_vms[i]->api, m_vms[i]->L, false);
+                SetHookMode(m_vms[i]->api, m_vms[i]->L, HookMode_None);
             }
 
             // Signal that we're detached.
@@ -1043,7 +1217,6 @@ void DebugBackend::StepInto(lua_State* L)
 {
     
     CriticalSectionLock lock(m_criticalSection);
-
     SetSteppingVm(L);
    
     for (unsigned int i = 0; i < m_vms.size(); ++i)
@@ -1074,7 +1247,6 @@ void DebugBackend::StepOver(lua_State* L)
 {
 
     CriticalSectionLock lock(m_criticalSection);
-
     SetSteppingVm(L);
 
     for (unsigned int i = 0; i < m_vms.size(); ++i)
@@ -1136,20 +1308,15 @@ void DebugBackend::ToggleBreakpoint(lua_State* L, unsigned int scriptIndex, unsi
 
     if (foundValidLine)
     {
-
-        if (script->breakpoints.size() < line + 1)
-        {
-            script->breakpoints.resize(line + 1, false);
-        }
-
-        script->breakpoints[line] = !script->breakpoints[line];
+        
+        bool breakpointSet = script->ToggleBreakpoint(line);
 
         // Send back the event telling the frontend that we set/unset the breakpoint.
         m_eventChannel.WriteUInt32(EventId_SetBreakpoint);    
         m_eventChannel.WriteUInt32(reinterpret_cast<int>(L));  
         m_eventChannel.WriteUInt32(scriptIndex);
         m_eventChannel.WriteUInt32(line);
-        m_eventChannel.WriteUInt32(script->breakpoints[line]);
+        m_eventChannel.WriteUInt32(breakpointSet);
         m_eventChannel.Flush();
     
     }
@@ -1180,7 +1347,7 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
     //   |      |
     //   +------+
 
-    StackEntry nativeStack[100];
+    StackEntry nativeStack[200];
     unsigned int nativeStackSize = 0;
 
     if (vm != NULL)
@@ -1188,7 +1355,7 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
         // Remember how many stack levels to skip so when we evaluate we can adjust
         // the stack level accordingly.
         vm->stackTop = stackTop;
-        nativeStackSize = GetCStack(vm->hThread, nativeStack, 100);
+        nativeStackSize = GetCStack(vm->hThread, nativeStack, 200);
     }
     else
     {
@@ -1324,7 +1491,7 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         message = "No error message available";
     }
 
-    if (!GetIsExceptionIgnored(message))
+    if (m_breakOnError && !GetIsExceptionIgnored(message))
     {
 
         // Send the exception event. Ignore the top of the stack when we send the
@@ -1341,12 +1508,15 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         // deadlocking in this case, just send an error message.
 
         CriticalSectionTryLock lock(m_breakLock);
-        if (lock.IsHeld()) {
-           SendBreakEvent(api, L, 1);
-           SendExceptionEvent(L, message);
-           WaitForContinue();
-        } else {
-           Message(message, MessageType_Error);
+        if (lock.IsHeld()) 
+        {
+            SendBreakEvent(api, L, 1);
+            SendExceptionEvent(L, message);
+            WaitForContinue();
+        } 
+        else 
+        {
+            Message(message, MessageType_Error);
         }
     }
         
@@ -1376,7 +1546,7 @@ bool DebugBackend::GetStartupDirectory(char* path, int maxPathLength)
 
     if (!GetModuleFileName(g_hInstance, path, maxPathLength))
     {
-		return false;
+        return false;
     }
 
     char* lastSlash = strrchr(path, '\\');
@@ -1806,7 +1976,7 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     int localTable   = envTable - 2;
 
     // Disable the debugger hook so that we don't try to debug the expression.
-    SetHookEnabled(api, L, false);
+    SetHookMode(api, L, HookMode_None);
     EnableIntercepts(false);
     
     int stackTop = lua_gettop_dll(api, L);    
@@ -1918,12 +2088,12 @@ bool DebugBackend::Evaluate(unsigned long api, lua_State* L, const std::string& 
     TiXmlPrinter printer;
     printer.SetIndent("\t");
 
-	document.Accept( &printer );
-	result = printer.Str();
+    document.Accept( &printer );
+    result = printer.Str();
 
     // Reenable the debugger hook
     EnableIntercepts(true);
-    SetHookEnabled(api, L, true);
+    SetHookMode(api, L, HookMode_Full);
 
     int t2 = lua_gettop_dll(api, L);
     assert(t1 == t2);
@@ -2112,7 +2282,7 @@ TiXmlNode* DebugBackend::GetValueAsText(unsigned long api, lua_State* L, int n, 
         lua_Debug ar;
         lua_getinfo_dll(api, L, ">Sn", &ar);
 
-        unsigned int scriptIndex = GetScriptIndex(ar.source);
+        int scriptIndex = GetScriptIndex(ar.source);
 
         node = new TiXmlElement("function");
         node->LinkEndChild(WriteXmlNode("script", scriptIndex));

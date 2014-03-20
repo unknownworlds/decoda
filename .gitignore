@@ -2,3 +2,4 @@ build/*
 bin/*
 install/output/*
 docs/output/*
+libs/*

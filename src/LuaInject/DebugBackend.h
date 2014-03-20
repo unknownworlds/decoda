@@ -108,7 +108,9 @@ public:
      * was not available for the script. This should be set if the script was encountered
      * through a call other than the load function.
      */
-    unsigned int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+    int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
+
+    int RegisterScript(lua_State* L, lua_Debug* ar);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
@@ -173,7 +175,9 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    int GetScriptIndex(const char* name) const;
+
+    bool StackHasBreakpoint(unsigned long api, lua_State* L);
 
     /**
      * Returns the class name associated with the metatable index. This makes
@@ -197,6 +201,11 @@ public:
      * Sends a text message to the front end.
      */
     void Message(const char* message, MessageType type = MessageType_Normal);
+
+    /**
+     * Enable/disables stopping execution on errors
+     */
+    void BreakOnError(bool enabled);
 
     /**
      * Ignores the specified exception whenever it occurs.
@@ -237,10 +246,18 @@ private:
          */
         bool GetHasBreakPoint(unsigned int line) const;
         
+        bool HasBreakPointInRange(unsigned int start, unsigned int end) const;
+
+        bool ToggleBreakpoint(unsigned int line);
+
+        bool HasBreakpointsActive();
+
+        void ClearBreakpoints();
+
         std::string                 name;
         std::string                 source;
         std::string                 title;
-        std::vector<bool>           breakpoints;    // True for the indices of lines that have breakpoints.
+        std::vector<unsigned int>   breakpoints;    // Lines that have breakpoints on them.
         std::vector<unsigned int>   validLines;     // Lines that can have breakpoints on them.
 
     };
@@ -390,6 +407,8 @@ private:
         std::string     name;
         unsigned int    stackTop;
         bool            luaJitWorkAround;
+        bool            breakpointInStack;
+        std::string     lastFunctions;
     };
 
     struct StackEntry
@@ -516,6 +535,8 @@ private:
      */
     void LogHookEvent(unsigned long api, lua_State* L, lua_Debug* ar);
 
+    void UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* hookEvent);
+
     /**
      * Calls the named meta-method for the specified value. If the value does
      * not have a meta-table or the named meta-method, the function returns false.
@@ -563,10 +584,11 @@ private:
     typedef stdext::hash_map<lua_State*, lua_State*>        StateParentMap;
 
     static DebugBackend*            s_instance;
-    static const unsigned int       s_maxStackSize  = 100;
+    static const unsigned int       s_maxStackSize  = 200;
 
     FILE*                           m_log;
 
+    bool                            m_breakOnError;
     Mode                            m_mode;
     std::string                     m_stepVmName;
     HANDLE                          m_stepEvent;

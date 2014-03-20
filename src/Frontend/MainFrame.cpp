@@ -490,6 +490,7 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_symbolParser = new SymbolParser;
     m_symbolParser->SetEventHandler(this);
+    m_waitForFinalSymbolParse = false;
 
     // Creating a new project will clear this out, so save it.
     wxString lastProjectLoaded = m_lastProjectLoaded;
@@ -783,6 +784,11 @@ void MainFrame::SetProject(Project* project)
     
     UpdateCaption();
 
+    if (!m_project->GetFileName().IsEmpty())
+    {
+        m_waitForFinalSymbolParse = true;
+        m_statusBar->SetStatusText("Loading Symbols", 0);
+    }
     m_projectExplorer->SetProject(m_project);
     m_symbolParser->SetProject(m_project);
     m_breakpointsWindow->SetProject(m_project);
@@ -3164,7 +3170,7 @@ void MainFrame::OnIdle(wxIdleEvent& event)
 
         wxProcess* process = m_runningProcesses[i];
         
-        if (CopyProcessOutputToWindow(process))
+        if (m_processOutputSink.Pump(*m_output, *process))
         {
             // We have more input to process, so get another idle.
             event.RequestMore();
@@ -3203,9 +3209,7 @@ void MainFrame::OnProcessTerminate(wxProcessEvent& event)
         {
 
             // Grab any remaning output from this process.
-            while (CopyProcessOutputToWindow(process))
-            {
-            }
+            m_processOutputSink.Dump(*m_output, *process);
 
             // Ring the bell to alert the user.
             wxBell();
@@ -3721,29 +3725,6 @@ void MainFrame::FindText(OpenFile* file, const wxString& text, int flags)
 
 }
 
-bool MainFrame::CopyProcessOutputToWindow(wxProcess* process)
-{
-    
-    bool hasInput = false;
-
-    if (process->IsInputAvailable())
-    {
-        wxTextInputStream stream(*process->GetInputStream());
-        m_output->OutputMessage(stream.ReadLine());
-        hasInput = true;
-    }
-
-    if (process->IsErrorAvailable() )
-    {
-        wxTextInputStream stream(*process->GetErrorStream());
-        m_output->OutputMessage(stream.ReadLine());
-        hasInput = true;
-    }
-
-    return hasInput;
-
-}
-    
 void MainFrame::SubstituteVariableArguments(wxString& text) const
 {
     
@@ -3949,11 +3930,15 @@ void MainFrame::LoadExternalTool(wxXmlNode* node)
     wxString arguments;
     node->GetPropVal("arguments", &arguments);
 
+    wxString initialDirectory;
+    node->GetPropVal("initialdirectory", &initialDirectory);
+
     ExternalTool* tool = new ExternalTool;
 
     tool->SetTitle(title);
     tool->SetCommand(command);
     tool->SetArguments(arguments);
+    tool->SetInitialDirectory(initialDirectory);
 
     m_tools.push_back(tool);
 
@@ -4082,6 +4067,7 @@ wxXmlNode* MainFrame::SaveExternalTool(const ExternalTool* tool) const
     node->AddProperty("title", tool->GetTitle());
     node->AddProperty("command", tool->GetCommand());
     node->AddProperty("arguments", tool->GetArguments());
+    node->AddProperty("initialdirectory", tool->GetInitialDirectory());
 
     return node;
 
@@ -4724,8 +4710,8 @@ void MainFrame::SetDefaultHotKeys()
 
     m_keyBinder.SetShortcut(ID_DebugStart,                  wxT("F5"));
     m_keyBinder.SetShortcut(ID_DebugStartWithoutDebugging,  wxT("Ctrl+F5"));
-	m_keyBinder.SetShortcut(ID_DebugStepInto,               wxT("F11"));
-	m_keyBinder.SetShortcut(ID_DebugStepOver,               wxT("F10"));
+    m_keyBinder.SetShortcut(ID_DebugStepInto,               wxT("F11"));
+    m_keyBinder.SetShortcut(ID_DebugStepOver,               wxT("F10"));
     m_keyBinder.SetShortcut(ID_DebugQuickWatch,             wxT("Shift+F9"));
     m_keyBinder.SetShortcut(ID_DebugToggleBreakpoint,       wxT("F9"));
     m_keyBinder.SetShortcut(ID_DebugDeleteAllBreakpoints,   wxT("Ctrl+Shift+F9"));
@@ -5232,7 +5218,7 @@ void MainFrame::ReloadFile(OpenFile* file)
 {
 
     CodeEdit& editor = *file->edit;
-    int oldScrollPos = editor.GetScrollPos(wxVSCROLL);
+    unsigned int oldScrollPos = std::max(editor.GetScrollPos(wxVSCROLL), 0);
 
     //Disable modified events so OnCodeEditModified is not called
     editor.SetModEventMask(0);
@@ -5242,14 +5228,14 @@ void MainFrame::ReloadFile(OpenFile* file)
 
     editor.SetModEventMask(wxSCI_MODEVENTMASKALL);
     
-    int newLineCount = editor.GetLineCount();
+    unsigned int newLineCount = editor.GetLineCount();
     
     std::vector<unsigned int>& breakpoints = file->file->breakpoints;
     
     //Erase breakpoints past the end of the file and re-add the markers for the rest
     for (std::vector<unsigned int>::iterator it = breakpoints.begin(); it != breakpoints.end() ;)
     {
-        if (*it >= (unsigned int)newLineCount)
+        if (*it >= newLineCount)
         {
           it = breakpoints.erase(it);
         }
@@ -6094,6 +6080,28 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
 
     unsigned int fileId = event.GetFileId();
     Project::File* file = m_project->GetFileById(fileId);
+
+    //If we are batch loading files, wait for the final symbol parse of that
+    //batch before adding symbol data to tree
+    if (m_waitForFinalSymbolParse)
+    {
+        if (!event.GetIsFinalQueueItem())
+        {
+            //Don't add symbol data yet.
+            return;
+        }
+        else
+        {
+            //Batch loading is done
+            m_waitForFinalSymbolParse = false;
+            m_statusBar->SetStatusText("", 0);
+
+            //Set the project to itself so we can trigger Rebuild()
+            m_projectExplorer->SetProject(m_project);
+            
+            return;
+        }
+    }
 
     if (file != NULL)
     {
