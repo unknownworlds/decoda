@@ -146,6 +146,7 @@ DebugBackend::DebugBackend()
     m_mode                  = Mode_Continue;
     m_log                   = NULL;
     m_warnedAboutUserData   = false;
+    m_breakOnError          = true;
 }
 
 DebugBackend::~DebugBackend()
@@ -691,6 +692,12 @@ void DebugBackend::Message(const char* message, MessageType type)
     m_eventChannel.Flush();
 }
 
+void DebugBackend::BreakOnError(bool enabled)
+{
+   m_breakOnError = enabled;
+}
+
+
 void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 {
 
@@ -805,6 +812,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
         bool stop = false;
 
+        if (m_stepVmName.empty() || vm->name == m_stepVmName) {
         // If we're stepping on each line or we just stepped out of a function that
         // we were stepping over, break.
 
@@ -824,6 +832,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0))
         {
             stop = true;
+        }
         }
 
         if (scriptIndex == -1)
@@ -1084,10 +1093,10 @@ void DebugBackend::CommandThreadProc()
                 Continue();
                 break;
             case CommandId_StepOver:
-                StepOver();
+                StepOver(L);
                 break;
             case CommandId_StepInto:
-                StepInto();
+                StepInto(L);
                 break;
             case CommandId_ToggleBreakpoint:
                 {
@@ -1103,7 +1112,7 @@ void DebugBackend::CommandThreadProc()
                 }
                 break;
             case CommandId_Break:
-                Break();
+                Break(L);
                 break;
             case CommandId_Evaluate:
                 {
@@ -1167,11 +1176,13 @@ DWORD WINAPI DebugBackend::StaticCommandThreadProc(LPVOID param)
     return 0;
 }
 
-void DebugBackend::StepInto()
+void DebugBackend::StepInto(lua_State* L)
 {
     
     CriticalSectionLock lock(m_criticalSection);
     
+    SetSteppingVm(L);
+   
     for (unsigned int i = 0; i < m_vms.size(); ++i)
     {
         m_vms[i]->callCount = 0;
@@ -1182,11 +1193,27 @@ void DebugBackend::StepInto()
 
 }
 
-void DebugBackend::StepOver()
+void DebugBackend::SetSteppingVm(lua_State* L)
+{
+    m_stepVmName.clear();
+    StateToVmMap::const_iterator i = m_stateToVm.find(L);
+    if (i != m_stateToVm.end()) {
+       int api = i->second->api;
+       lua_rawgetglobal_dll(api, L, "decoda_name");
+       const char* name = lua_tostring_dll(api, L, -1);
+       if (name) {
+          m_stepVmName = name;
+       }
+    }
+}
+
+void DebugBackend::StepOver(lua_State* L)
 {
 
     CriticalSectionLock lock(m_criticalSection);
     
+    SetSteppingVm(L);
+
     for (unsigned int i = 0; i < m_vms.size(); ++i)
     {
         m_vms[i]->callCount = 0;
@@ -1212,8 +1239,9 @@ void DebugBackend::Continue()
 
 }
 
-void DebugBackend::Break()
+void DebugBackend::Break(lua_State* L)
 {
+    SetSteppingVm(L);
     m_mode = Mode_StepInto;
 }
 
@@ -1284,7 +1312,7 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
     //   |      |
     //   +------+
 
-    StackEntry nativeStack[100];
+    StackEntry nativeStack[200];
     unsigned int nativeStackSize = 0;
 
     if (vm != NULL)
@@ -1292,7 +1320,7 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
         // Remember how many stack levels to skip so when we evaluate we can adjust
         // the stack level accordingly.
         vm->stackTop = stackTop;
-        nativeStackSize = GetCStack(vm->hThread, nativeStack, 100);
+        nativeStackSize = GetCStack(vm->hThread, nativeStack, 200);
     }
     else
     {
@@ -1422,7 +1450,7 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
         message = "No error message available";
     }
 
-    if (!GetIsExceptionIgnored(message))
+    if (m_breakOnError && !GetIsExceptionIgnored(message))
     {
 
         // Send the exception event. Ignore the top of the stack when we send the

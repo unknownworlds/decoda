@@ -104,13 +104,13 @@ public:
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step into the function call.
      */
-    void StepInto();
+    void StepInto(lua_State* L);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
      * is a function call, this will step over the function call.
      */
-    void StepOver();
+    void StepOver(lua_State* L);
 
     /**
      * Continues execution until a breakpoint is hit.
@@ -121,7 +121,7 @@ public:
      * Breaks execution of the script on the next line executed.
      * thread.
      */
-    void Break();
+    void Break(lua_State *L);
 
     /**
      * Evalates the expression. If there was an error evaluating the expression the
@@ -189,6 +189,11 @@ public:
      * Sends a text message to the front end.
      */
     void Message(const char* message, MessageType type = MessageType_Normal);
+
+    /**
+     * Enable/disables stopping execution on errors
+     */
+    void BreakOnError(bool enabled);
 
     /**
      * Ignores the specified exception whenever it occurs.
@@ -563,17 +568,21 @@ private:
         const lua_Debug scriptStack[], unsigned int scriptStackSize,
         StackEntry unifiedStack[]);
 
+    void SetSteppingVm(lua_State* L);
+
 private:
 
     typedef stdext::hash_map<lua_State*, VirtualMachine*>   StateToVmMap;
     typedef stdext::hash_map<std::string, unsigned int>     NameToScriptMap;
 
     static DebugBackend*            s_instance;
-    static const unsigned int       s_maxStackSize  = 100;
+    static const unsigned int       s_maxStackSize  = 200;
 
     FILE*                           m_log;
 
+    bool                            m_breakOnError;
     Mode                            m_mode;
+    std::string                     m_stepVmName;
     HANDLE                          m_stepEvent;
     HANDLE                          m_loadEvent;
     HANDLE                          m_detachEvent;
