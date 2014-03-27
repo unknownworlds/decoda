@@ -4088,7 +4088,9 @@ void MainFrame::CheckForUpdate()
         return;
     }
 
-    m_updater.CheckForUpdates(s_updateUrl, MainApp::s_buildNumber, UpdateCallback, this);
+    // DL: This URL is no longer valid and the check for update causes Decoda to hang on exit.
+    // Working on a fix but until fixed - just don't check for updates...
+    // m_updater.CheckForUpdates(s_updateUrl, MainApp::s_buildNumber, UpdateCallback, this);
 
 #endif
 
