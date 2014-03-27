@@ -101,10 +101,8 @@ Section "Decoda (required)"
   File "..\bin\release\LuaInject.dll"
   File "..\bin\release\Update.dll"
   File "..\bin\release\dbghelp.dll"
-  File "..\bin\release\msvcp80.dll"
-  File "..\bin\release\msvcr80.dll"
-  File "..\bin\release\msvcm80.dll"
-  File "..\bin\release\Microsoft.VC80.CRT.manifest"
+  File "..\bin\release\msvcp120.dll"
+  File "..\bin\release\msvcr120.dll"
   File "..\COPYING.TXT"
 
   ; Setup the deproj file association
@@ -181,10 +179,8 @@ Section "Uninstall"
   Delete $INSTDIR\Update.dll
   Delete $INSTDIR\dbghelp.dll
   Delete $INSTDIR\uninstall.exe
-  Delete $INSTDIR\msvcp80.dll
-  Delete $INSTDIR\msvcr80.dll
-  Delete $INSTDIR\msvcm80.dll
-  Delete $INSTDIR\Microsoft.VC80.CRT.manifest
+  Delete $INSTDIR\msvcp120.dll
+  Delete $INSTDIR\msvcr120.dll
   Delete $INSTDIR\COPYING.txt
   
   ; Remove shortcuts, if any
