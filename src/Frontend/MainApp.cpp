@@ -36,7 +36,7 @@ IMPLEMENT_APP(MainApp)
 // Like a version number, but used to track updates. This should be incremented
 // whenever a new build is released.
 const unsigned int  MainApp::s_buildNumber = 1034;
-const char*         MainApp::s_versionDesc = "Version 1.17 (Build 1035) RC3";
+const char*         MainApp::s_versionDesc = "Version 1.17 (Build 1035) Beta 1";
 
 std::string UrlEncode(const std::string& string)
 {
