@@ -182,6 +182,7 @@ int GetEvent(unsigned long api, const lua_Debug* ar);
 int GetNups(unsigned long api, const lua_Debug* ar);
 int GetCurrentLine(unsigned long api, const lua_Debug* ar);
 int GetLineDefined(unsigned long api, const lua_Debug* ar);
+int GetLastLineDefined(unsigned long api, const lua_Debug* ar);
 const char* GetSource(unsigned long api, const lua_Debug* ar);
 const char* GetWhat(unsigned long api, const lua_Debug* ar);
 const char* GetName(unsigned long api, const lua_Debug* ar);

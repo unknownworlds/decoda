@@ -715,6 +715,15 @@ int GetLineDefined(unsigned long api, const lua_Debug* ar)
     }
 }
 
+int GetLastLineDefined(unsigned long api, const lua_Debug* ar)
+{
+    switch( g_interfaces[api].version)
+    {
+        case 520: return ar->ld52.lastlinedefined;
+        default: return ar->ld51.lastlinedefined;
+    }
+}
+
 const char* GetSource(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)

@@ -111,7 +111,9 @@ wxProcess* ExternalTool::Run(const MainFrame* mainFrame) const
     wxProcess* process = wxProcess::Open(commandLine);
 
     if (!initialDirectory.IsEmpty())
+    {
         wxSetWorkingDirectory(workDirOriginal);
+    }
 
     return process;
 

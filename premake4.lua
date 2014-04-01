@@ -93,7 +93,6 @@ project "LuaInject"
 	}		
     includedirs {
 		"src/Shared",
-		"libs/lua/include",
 		"libs/LuaPlus/include",
 		"libs/tinyxml/include",
 		"libs/dbghlp/include",
@@ -104,7 +103,7 @@ project "LuaInject"
 	}
     links {
 		"Shared",
-		"psapi",
+		"psapi"
 	}
 
     configuration "Debug"

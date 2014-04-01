@@ -100,7 +100,7 @@ public:
      */
     int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
 
-    int RegisterScript(lua_State* L, lua_Debug* ar);
+    int RegisterScript(unsigned long api, lua_State* L, lua_Debug* ar);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
@@ -177,7 +177,7 @@ public:
      * name. The name is the same name that was supplied when the script was
      * loaded.
      */
-    unsigned int GetScriptIndex(const char* name) const;
+    int GetScriptIndex(const char* name) const;
 
     bool StackHasBreakpoint(unsigned long api, lua_State* L);
 
