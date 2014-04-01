@@ -25,11 +25,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <windows.h>
 
-extern "C"
-{
-#include <lua.h>
-#include <lauxlib.h>
-}
+#include "LuaTypes.h"
 
 #include <LuaPlus.h>
 
@@ -39,6 +35,7 @@ lua_State*      lua_newstate_dll        (unsigned long api, lua_Alloc, void*);
 lua_State*      lua_newthread_dll       (unsigned long api, lua_State* L);
 void            lua_close_dll           (unsigned long api, lua_State*);
 int             lua_error_dll           (unsigned long api, lua_State*);
+int             lua_absindex_dll        (unsigned long api, lua_State*, int);
 int             lua_sethook_dll         (unsigned long api, lua_State*, lua_Hook, int, int);
 int             lua_getinfo_dll         (unsigned long api, lua_State*, const char*, lua_Debug* ar);
 void            lua_remove_dll          (unsigned long api, lua_State*, int);
@@ -53,6 +50,8 @@ int             lua_type_dll            (unsigned long api, lua_State*, int);
 const char*     lua_typename_dll        (unsigned long api, lua_State*, int);
 void            lua_getfield_dll        (unsigned long api, lua_State*, int, const char*);
 void            lua_setfield_dll        (unsigned long api, lua_State*, int, const char*);
+void            lua_setglobal_dll       (unsigned long api, lua_State*, const char* s);
+void            lua_getglobal_dll       (unsigned long api, lua_State*, const char* s);
 void            lua_settop_dll          (unsigned long api, lua_State*, int);
 const char*     lua_getlocal_dll        (unsigned long api, lua_State*, const lua_Debug*, int);
 const char*     lua_setlocal_dll        (unsigned long api, lua_State*, const lua_Debug*, int);
@@ -64,6 +63,7 @@ void            lua_pushvalue_dll       (unsigned long api, lua_State*, int);
 void            lua_pushinteger_dll     (unsigned long api, lua_State*, int);
 void            lua_pushumber_dll       (unsigned long api, lua_State*, lua_Number);
 void            lua_pushlightuserdata_dll(unsigned long api, lua_State *L, void *p);
+void            lua_pushglobaltable_dll (unsigned long api, lua_State *L);
 const char*     lua_tostring_dll        (unsigned long api, lua_State*, int);
 const char*     lua_tolstring_dll       (unsigned long api, lua_State*, int, size_t* len);
 int             lua_toboolean_dll       (unsigned long api, lua_State*, int);
@@ -72,7 +72,7 @@ lua_CFunction   lua_tocfunction_dll     (unsigned long api, lua_State*, int);
 lua_Number      lua_tonumber_dll        (unsigned long api, lua_State*, int);
 void*           lua_touserdata_dll      (unsigned long api, lua_State* L, int index);
 int             lua_gettop_dll          (unsigned long api, lua_State*);
-int             lua_loadbuffer_dll      (unsigned long api, lua_State*, const char*, size_t, const char*);
+int             lua_loadbuffer_dll      (unsigned long api, lua_State*, const char*, size_t, const char*, const char*);
 void            lua_call_dll            (unsigned long api, lua_State*, int, int);
 int             lua_pcall_dll           (unsigned long api, lua_State*, int, int, int);
 void            lua_newtable_dll        (unsigned long api, lua_State*);
@@ -81,10 +81,10 @@ int             lua_rawequal_dll        (unsigned long api, lua_State *L, int id
 int             lua_getmetatable_dll    (unsigned long api, lua_State*, int objindex);
 int             lua_setmetatable_dll    (unsigned long api, lua_State* L, int index);
 int             luaL_loadfile_dll       (unsigned long api, lua_State*, const char*);
+int             luaL_loadfilex_dll      (unsigned long api, lua_State*, const char*, const char*);
 lua_State*      luaL_newstate_dll       (unsigned long api);
-int             luaL_loadfile_dll       (unsigned long api, lua_State*, const char*);
 int             luaL_loadbuffer_dll     (unsigned long api, lua_State*, const char*, size_t, const char*);
-int             luaL_loadfile_dll       (unsigned long api, lua_State*, const char*);
+int             luaL_loadbufferx_dll    (unsigned long api, lua_State*, const char*, size_t, const char*, const char*);
 int             luaL_ref_dll            (unsigned long api, lua_State *L, int t);
 void            luaL_unref_dll          (unsigned long api, lua_State *L, int t, int ref);
 int             luaL_newmetatable_dll   (unsigned long api, lua_State *L, const char *tname);
@@ -92,7 +92,6 @@ const char *    lua_getupvalue_dll      (unsigned long api, lua_State *L, int fu
 const char *    lua_setupvalue_dll      (unsigned long api, lua_State *L, int funcindex, int n);
 void            lua_getfenv_dll         (unsigned long api, lua_State *L, int index);
 int             lua_setfenv_dll         (unsigned long api, lua_State *L, int index);
-int             lua_cpcall_dll          (unsigned long api, lua_State *L, lua_CFunction func, void *ud);
 void *          lua_newuserdata_dll     (unsigned long api, lua_State *L, size_t size);
 int             lua_checkstack_dll      (unsigned long api, lua_State *L, int extra);
 
@@ -113,13 +112,11 @@ int                 lua_iswstring_dll   (unsigned long api, lua_State *L, int in
 #define lua_pushcfunction_dll(api,L,f)      lua_pushcclosure_dll(api, L, (f), 0)
 #define lua_register_dll(api, L,n,f)        (lua_pushcfunction_dll(api, L, f), lua_setglobal_dll(api, L, n))
 
-void lua_setglobal_dll(unsigned long api, lua_State* L, const char* s);
-void lua_getglobal_dll(unsigned long api, lua_State* L, const char* s);
-
 /**
  * This is similar to lua_cpcall_dll, but it handles the differences between
  * stdcall and cdecl and passes an api parameter to the C function. Therefore
  * using this function is preferred over lua_cpcall_dll.
+ * and lua_cpcall is deprecated in Lua 5.2, so it's gone anyway.
  */
 int lua_cpcall_dll(unsigned long api, lua_State *L, lua_CFunction_dll func, void *ud);
 
@@ -127,11 +124,6 @@ int lua_cpcall_dll(unsigned long api, lua_State *L, lua_CFunction_dll func, void
  * Like lua_getglobal, but does't invoke metamethods.
  */
 void lua_rawgetglobal_dll(unsigned long api, lua_State* L, const char* s);
-
-/**
- * Convert a stack index to a positive/absolute value.
- */
-int lua_abs_index_dll(unsigned long api, lua_State* L, int i);
 
 /**
  * Similar to lua_upvalueindex.
@@ -183,6 +175,18 @@ void SetHookMode(unsigned long api, lua_State* L, HookMode mode);
  * Returns the current hook mode for the specified state.
  */
 HookMode GetHookMode(unsigned long api, lua_State* L);
+
+bool GetIsHookEventRet(unsigned long api, int event);
+bool GetIsHookEventCall(unsigned long api, int event);
+int GetEvent(unsigned long api, const lua_Debug* ar);
+int GetNups(unsigned long api, const lua_Debug* ar);
+int GetCurrentLine(unsigned long api, const lua_Debug* ar);
+int GetLineDefined(unsigned long api, const lua_Debug* ar);
+int GetLastLineDefined(unsigned long api, const lua_Debug* ar);
+const char* GetSource(unsigned long api, const lua_Debug* ar);
+const char* GetWhat(unsigned long api, const lua_Debug* ar);
+const char* GetName(unsigned long api, const lua_Debug* ar);
+const char* GetHookEventName(unsigned long api, const lua_Debug* ar);
 
 /**
  * Creates a new function that can be used with the specified API. The new function

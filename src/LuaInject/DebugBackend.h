@@ -100,7 +100,7 @@ public:
      */
     int RegisterScript(lua_State* L, const char* source, size_t size, const char* name, bool unavailable);
 
-    int RegisterScript(lua_State* L, lua_Debug* ar);
+    int RegisterScript(unsigned long api, lua_State* L, lua_Debug* ar);
 
     /**
      * Steps execution of a "broken" script by one line. If the current line
@@ -576,7 +576,7 @@ private:
      * Creates a call stack that unifies the native call stack and the script
      * call stack.
      */
-    unsigned int GetUnifiedStack(const StackEntry nativeStack[], unsigned int nativeStackSize,
+    unsigned int GetUnifiedStack(unsigned long api, const StackEntry nativeStack[], unsigned int nativeStackSize,
         const lua_Debug scriptStack[], unsigned int scriptStackSize,
         StackEntry unifiedStack[]);
 
