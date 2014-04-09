@@ -808,7 +808,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         int scriptIndex = GetScriptIndex(arsource);
 
         if (scriptIndex == -1)
-        {            
+        {
             // This isn't a script we've seen before, so tell the debugger about it.
             scriptIndex = RegisterScript( api, L, ar);
         }
@@ -883,7 +883,7 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
                     --vm->callCount;
                 }
             }
-            else if (arevent == LUA_HOOKCALL)
+            else if( GetIsHookEventCall( api, arevent)) // only LUA_HOOKCALL for Lua 5.1, can also be LUA_HOOKTAILCALL for newer versions
             {
                 if (m_mode == Mode_StepOver)
                 {
@@ -914,7 +914,7 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
     lua_getinfo_dll(api, L, "S", hookEvent);
     int linedefined = GetLineDefined(api, hookEvent);
 
-    if (arevent == LUA_HOOKCALL && linedefined != -1)
+    if( GetIsHookEventCall( api, arevent) && linedefined != -1)
     {
         vm->lastFunctions = GetSource(api, hookEvent);
 
@@ -925,7 +925,7 @@ void DebugBackend::UpdateHookMode(unsigned long api, lua_State* L, lua_Debug* ho
             RegisterScript(api, L, hookEvent);
             scriptIndex = GetScriptIndex(vm->lastFunctions.c_str());
         }
-        
+
         Script* script = scriptIndex != -1 ? m_scripts[scriptIndex] : NULL;
 
         int lastlinedefined = GetLastLineDefined( api, hookEvent);
