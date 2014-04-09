@@ -3220,14 +3220,14 @@ bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HAN
             luaInterface.registryIndex  = -1001000;
             // starting with Lua 5.2, there is no longer a LUA_GLOBALSINDEX pseudo-index. Instead the global table is stored in the registry at LUA_RIDX_GLOBALS
             luaInterface.globalsIndex   = 2;
-            luaInterface.hookTailRet = 4; // LUA_HOOKTAILRET
+            luaInterface.hookTailCall = LUA_HOOKTAILCALL; // Lua5.2 has LUA_HOOKTAILCALL, but no LUA_HOOKTAILRET
         }
         else if ( symbols.find("lua_gettop") != symbols.end()) // should be ok for any version
         {
             luaInterface.version        = 510;
             luaInterface.registryIndex  = -10000;
             luaInterface.globalsIndex   = -10002;
-            luaInterface.hookTailCall = 4; // LUA_HOOKTAILCALL
+            luaInterface.hookTailRet = LUA_HOOKTAILRET; // // Lua5.1 has LUA_HOOKTAILRET, but no LUA_HOOKTAILCALL
         }
         else // if we get here, this means the module isn't related to Lua at all
         {
