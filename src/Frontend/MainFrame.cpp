@@ -5771,6 +5771,10 @@ bool MainFrame::ShowProjectSettingsDialog()
 
     dialog.CenterOnParent();
 
+    if (m_project->GetFileName().empty())
+	{
+		m_project->Load("Default.xml");
+	}
     dialog.SetCommandLine(m_project->GetCommandLine());
     dialog.SetCommandArguments(m_project->GetCommandArguments());
     dialog.SetWorkingDirectory(m_project->GetWorkingDirectory());
@@ -5796,6 +5800,11 @@ bool MainFrame::ShowProjectSettingsDialog()
         m_project->SetSccLocalPath(dialog.GetSccLocalPath());
         m_project->SetSccAuxProjectPath(dialog.GetSccAuxProjectPath());
 
+        if (m_project->GetFileName().empty())
+		{
+			m_project->Save("Default.xml");
+		}	
+		
         InitializeSourceControl();
         return true;
     
