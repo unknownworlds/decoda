@@ -49,6 +49,15 @@ void AutoCompleteManager::BuildFromProject(const Project* project)
     {
         BuildFromFile(project->GetFile(fileIndex));
     }
+    for (unsigned int directoryIndex = 0; directoryIndex < project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory const *directory = project->GetDirectory(directoryIndex);
+
+      for (unsigned int fileIndex = 0; fileIndex < project->GetNumFiles(); ++fileIndex)
+      {
+        BuildFromFile(directory->files[fileIndex]);
+      }
+    }
 
     // Sort the autocompletions (necessary for binary search).
     std::sort(m_entries.begin(), m_entries.end());

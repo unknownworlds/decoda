@@ -45,11 +45,11 @@ void SearchWindow::SetFontColorSettings(const FontColorSettings& settings)
     // happens often enough for it to really make much difference.
     Clear();
 
-    SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Default).backColor);
+    SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
 
-    m_messageAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Default).foreColor);
-    m_messageAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Default).backColor);
-    m_messageAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Default));
+    m_messageAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
+    m_messageAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+    m_messageAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Window));
 }
 
 void SearchWindow::OnDoubleClick(wxMouseEvent& event)

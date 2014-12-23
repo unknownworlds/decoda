@@ -67,6 +67,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/txtstrm.h>
 #include <wx/xml/xml.h>
 #include <wx/fontdlg.h>
+#include <wx/dirdlg.h>
 #include <wx/file.h>
 #include <wx/dir.h>
 #include <wx/wfstream.h>
@@ -132,6 +133,7 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     
     // Project menu events.
     EVT_MENU(ID_ProjectAddExistingFile,             MainFrame::OnProjectAddExistingFile)
+    EVT_MENU(ID_ProjectAddDirectory,                MainFrame::OnProjectAddDirectory)
     EVT_MENU(ID_ProjectAddNewFile,                  MainFrame::OnProjectAddNewFile)
     EVT_MENU(ID_ProjectSettings,                    MainFrame::OnProjectSettings)
     EVT_MENU(ID_FileNewProject,                     MainFrame::OnFileNewProject)
@@ -275,6 +277,7 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_COMMAND(wxID_ANY, wxEVT_UPDATE_INFO_EVENT,  MainFrame::OnUpdateInfo)
 
     EVT_SYMBOL_PARSER(                              MainFrame::OnSymbolsParsed)
+    //EVT_SYMBOL_PARSER(                              MainFrame::OnSymbolsParsed)
 
 END_EVENT_TABLE()
 
@@ -490,6 +493,7 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_symbolParser = new SymbolParser;
     m_symbolParser->SetEventHandler(this);
+
     m_waitForFinalSymbolParse = false;
 
     // Creating a new project will clear this out, so save it.
@@ -630,6 +634,7 @@ void MainFrame::InitializeMenu()
     menuProject->AppendSeparator();
     menuProject->Append(ID_ProjectAddNewFile,           _("Add Ne&w File..."));
     menuProject->Append(ID_ProjectAddExistingFile,      _("Add Existin&g File..."));
+    menuProject->Append(ID_ProjectAddDirectory,         _("Add Directory..."));
     menuProject->AppendSeparator();
     menuProject->AppendSubMenu(menuRecentProjects,      _("&Recent Files..."));
     menuProject->AppendSeparator();
@@ -709,7 +714,6 @@ void MainFrame::InitializeMenu()
     menuBar->Append( menuHelp,                          _("&Help"));
 
     SetMenuBar( menuBar );
-
 }
 
 void MainFrame::OnFileNewProject(wxCommandEvent& WXUNUSED(event))
@@ -1351,6 +1355,29 @@ void MainFrame::OnProjectAddExistingFile(wxCommandEvent& WXUNUSED(event))
         }
         
     }
+
+}
+
+void MainFrame::OnProjectAddDirectory(wxCommandEvent& event)
+{
+  wxDirDialog dialog(this, _("Add Directory"), m_project->GetBaseDirectory(), wxDD_DEFAULT_STYLE);
+
+  if (dialog.ShowModal() == wxID_OK)
+  {
+    Project::Directory *directory = m_project->AddDirectory(dialog.GetPath());
+    
+    m_projectExplorer->InsertDirectory(directory);
+
+    for (Project::File *file : directory->files)
+    {
+      m_symbolParser->QueueForParsing(file);
+      m_autoCompleteManager.BuildFromProject(m_project);
+
+      // Update the status for the new files.
+      UpdateProjectFileStatus(file);
+    }
+  }
+
 
 }
 
@@ -3257,14 +3284,14 @@ void MainFrame::OnProjectExplorerItemActivated(wxTreeEvent& event)
     
     ProjectExplorerWindow::ItemData* data = m_projectExplorer->GetDataForItem(item);
 
-    if (data != NULL && data->file != NULL)
+    if (data != NULL && data->file != NULL && data->isFile)
     {
-
-        OpenFile* file = OpenProjectFile(data->file);
+        Project::File *dataFile = (Project::File *)data->file;
+        OpenFile* file = OpenProjectFile(dataFile);
 
         if (file == NULL)
         {
-            wxMessageBox(wxString::Format("The file '%s' could not be opened.", data->file->fileName.GetFullPath()));
+            wxMessageBox(wxString::Format("The file '%s' could not be opened.", dataFile->fileName.GetFullPath()));
         }
         else
         {
@@ -3296,6 +3323,14 @@ void MainFrame::OnProjectExplorerKeyDown(wxTreeEvent& event)
                 DeleteProjectFile(files[i]);
                 alltemp = false;
             }
+        }
+
+        std::vector<Project::Directory*> directories;
+        m_projectExplorer->GetSelectedDirectories(directories);
+        for (unsigned int i = 0; i < directories.size(); ++i)
+        {
+          DeleteProjectDirectory(directories[i]);
+          alltemp = false;
         }
 
         if (alltemp)
@@ -4425,6 +4460,27 @@ void MainFrame::DeleteProjectFile(Project::File* file)
 
 }
 
+void MainFrame::DeleteProjectDirectory(Project::Directory* directory)
+{
+  for (Project::File *file : directory->files)
+  {
+    for (unsigned int i = 0; i < m_openFiles.size(); ++i)
+    {
+      if (m_openFiles[i]->file == file)
+      {
+        m_notebook->DeletePage(i);
+        m_openFiles.erase(m_openFiles.begin() + i);
+        RemovePageFromTabOrder(i);
+        break;
+      }
+    }
+    m_breakpointsWindow->RemoveFile(file);
+  }
+
+  m_projectExplorer->RemoveDirectory(directory);
+  m_project->RemoveDirectory(directory);
+}
+
 void MainFrame::AddVmToList(unsigned int vm)
 {
 
@@ -4670,7 +4726,18 @@ void MainFrame::UpdateEditorOptions()
     }
 
     // Set the font of the output window to match the code editor.
+    m_mgr.GetArtProvider()->SetColor(wxAUI_DOCKART_SASH_COLOUR, m_fontColorSettings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+
+    m_searchWindow->SetFontColorSettings(m_fontColorSettings);
+    m_breakpointsWindow->SetFontColorSettings(m_fontColorSettings);
+    m_projectExplorer->SetFontColorSettings(m_fontColorSettings);
     m_output->SetFontColorSettings(m_fontColorSettings);
+    m_watch->SetFontColorSettings(m_fontColorSettings);
+    m_callStack->SetFontColorSettings(m_fontColorSettings);
+    m_vmList->SetFontColorSettings(m_fontColorSettings);
+
+    //Have to repaint to get the sash color.
+    this->Refresh();
 
     // Set the font of the watch window to match the code editor so
     // that non-ASCII text will be displayed properly.

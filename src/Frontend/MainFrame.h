@@ -245,6 +245,11 @@ public:
     void OnProjectAddExistingFile(wxCommandEvent& event);
 
     /**
+    * Called when the user selects Project/Add Directory from the menu.
+    */
+    void OnProjectAddDirectory(wxCommandEvent& event);
+
+    /**
      * Called when the user selects Project/Add New File from the menu.
      */
     void OnProjectAddNewFile(wxCommandEvent& event);
@@ -1082,6 +1087,11 @@ private:
     void DeleteProjectFile(Project::File* file);
 
     /**
+    * Removes a directory from the project (does not delete the directory on disk).
+    */
+    void DeleteProjectDirectory(Project::Directory* directory);
+
+    /**
      * Updates the break point marker in an open file. If set is enabled the
      * marker will be added at the specified line, otherwise it will be removed.
      * Note this only updates the UI and does not actually set breakpoints.
@@ -1369,6 +1379,7 @@ private:
         ID_EditFind                         = 16,
         ID_EditFindNext                     = 17,
         ID_ProjectAddExistingFile           = 18,
+        ID_ProjectAddDirectory              = 88,
         ID_ProjectSettings                  = 19,
         ID_DebugStart                       = 20,
         ID_DebugStop                        = 21,

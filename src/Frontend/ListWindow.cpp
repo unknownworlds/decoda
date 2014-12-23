@@ -49,7 +49,12 @@ ListWindow::ListWindow(MainFrame* mainFrame, wxWindowID winid)
     imageList->Add( wxMEMORY_BITMAP(Currentline_png) );
 
     AssignImageList(imageList, wxIMAGE_LIST_SMALL);
+}
 
+void ListWindow::SetFontColorSettings(const FontColorSettings& settings)
+{
+  SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
 }
 
 void ListWindow::Append(const wxString& name)

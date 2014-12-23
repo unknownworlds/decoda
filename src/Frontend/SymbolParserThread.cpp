@@ -100,7 +100,6 @@ wxThread::ExitCode SymbolParserThread::Entry()
                 // Dispatch the message to event handler.
                 SymbolParserEvent event(m_headItem->fileId, symbols, isLastItem);
                 m_eventHandler->AddPendingEvent(event);
-
             }
 
             delete m_headItem;

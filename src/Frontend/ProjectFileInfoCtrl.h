@@ -25,6 +25,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "Project.h"
 #include <wx/wx.h>
+#include "FontColorSettings.h"
 
 //
 // Forward declarations.
@@ -45,6 +46,12 @@ public:
      */
     explicit ProjectFileInfoCtrl(wxWindow* parent, wxWindowID id = wxID_ANY);
   
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
+
     /**
      * Called when the info box needs to be repainted.
      */
@@ -80,6 +87,7 @@ private:
     
     const Project::File*    m_file;
     bool                    m_textIsClipped;
+    wxColor                 m_fontColor;
 
 };
 

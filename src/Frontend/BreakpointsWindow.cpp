@@ -95,10 +95,18 @@ BreakpointsWindow::BreakpointsWindow(MainFrame* mainFrame, wxWindowID winid)
 	
 	fgSizer1->Add( m_buttonBar, 0, wxALL|wxEXPAND, 3 );
 	fgSizer1->Add( m_breakpointList, 0, wxALL|wxEXPAND, 0 );
-	
+
+  
+
 	SetSizer( fgSizer1 );
 	Layout();
 
+}
+
+void BreakpointsWindow::SetFontColorSettings(const FontColorSettings& settings)
+{
+  m_breakpointList->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_breakpointList->SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
 }
 
 void BreakpointsWindow::SetProject(Project* project)

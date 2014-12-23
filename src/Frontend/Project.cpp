@@ -28,6 +28,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "Symbol.h"
 
 #include <wx/xml/xml.h>
+#include <wx/dir.h>
 #include <wx/filefn.h>
 
 #include <algorithm>
@@ -281,6 +282,16 @@ const Project::File* Project::GetFile(unsigned int fileIndex) const
     return m_files[fileIndex];
 }
 
+const Project::Directory *Project::GetDirectory(unsigned int dirIndex) const
+{
+    return m_directories[dirIndex];
+}
+
+Project::Directory *Project::GetDirectory(unsigned int dirIndex)
+{
+    return m_directories[dirIndex];
+}
+
 Project::File* Project::GetFileById(unsigned int fileId)
 {
 
@@ -292,6 +303,18 @@ Project::File* Project::GetFileById(unsigned int fileId)
         }
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_directories.size(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_directories[directoryIndex];
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        if (directory->files[fileIndex]->fileId == fileId)
+        {
+          return directory->files[fileIndex];
+        }
+      }
+    }
+
     return NULL;
 
 }
@@ -299,6 +322,11 @@ Project::File* Project::GetFileById(unsigned int fileId)
 unsigned int Project::GetNumFiles() const
 {
     return m_files.size();
+}
+
+unsigned int Project::GetNumDirectories() const
+{
+    return m_directories.size();
 }
 
 Project::File* Project::AddFile(const wxString& fileName)
@@ -333,6 +361,71 @@ Project::File* Project::AddFile(const wxString& fileName)
     
     return file;
 
+}
+
+Project::Directory* Project::AddDirectory(const wxString& directoryStr)
+{
+  wxString directoryName = directoryStr;
+
+  wxString fullDir;
+  wxFileName path(directoryName);
+  path.Normalize(wxPATH_NORM_ALL, m_baseDirectory);
+  path.MakeRelativeTo(m_baseDirectory);
+  fullDir = path.GetFullPath();
+
+  for (unsigned int i = 0; i < m_directories.size(); ++i)
+  {
+    if (m_directories[i]->path == fullDir)
+    {
+      return NULL;
+    }
+  }
+
+  wxDir directory(m_baseDirectory + "\\" + fullDir);
+  wxArrayString filenames;
+
+  Directory *dir = new Directory;
+  
+  if (directory.IsOpened())
+  {
+    wxString dirPath = directory.GetName();
+
+    wxFileName name(m_baseDirectory + "\\" + fullDir);
+    name.Normalize();
+
+    dir->name = name.GetFullPath();
+    dir->path = fullDir;
+
+    directory.GetAllFiles(dirPath, &filenames, wxEmptyString, wxDIR_DIRS | wxDIR_FILES);
+  }
+
+  for (auto &filename : filenames)
+  {
+    File* file = new File;
+
+    file->state = CodeState_Normal;
+    file->scriptIndex = -1;
+    file->temporary = false;
+    file->status = Status_None;
+    file->fileId = ++s_lastFileId;
+
+    wxFileName localPath(filename);
+    localPath.MakeRelativeTo(dir->name);
+
+    file->localPath = localPath.GetPath();
+    file->fileName = filename;
+    if (file->fileName.IsRelative())
+    {
+      file->fileName.MakeAbsolute(m_baseDirectory);
+    }
+
+    dir->files.push_back(file);
+  }
+
+  m_directories.push_back(dir);
+  m_needsSave = true;
+
+  return dir;
 }
 
 Project::File* Project::AddTemporaryFile(unsigned int scriptIndex)
@@ -401,7 +494,31 @@ void Project::RemoveFile(File* file)
     
     ClearVector(file->symbols);
     delete file;
+}
 
+void Project::RemoveDirectory(Directory* directory)
+{
+  std::vector<Directory*>::iterator iterator = m_directories.begin();
+
+  while (iterator != m_directories.end())
+  {
+    if (directory == *iterator)
+    {
+      for (File *file : directory->files)
+      {
+        ClearVector(file->symbols);
+        delete file;
+      }
+
+      m_directories.erase(iterator);
+      m_needsSave = true;
+      m_needsUserSave = true;
+      break;
+    }
+    ++iterator;
+  }
+
+  delete directory;
 }
 
 void Project::CleanUpAfterSession()
@@ -542,6 +659,16 @@ wxXmlNode* Project::SaveFileNode(const wxString& baseDirectory, const File* file
 
     return node;
 
+}
+
+wxXmlNode* Project::SaveDirectoryNode(const Directory* dir)
+{
+  //Convert empty string to current directory.
+  wxString path = dir->path;
+  if (path == "")
+    path = ".\\";
+
+  return WriteXmlNode("directory", path);
 }
 
 wxXmlNode* Project::SaveUserFileNode(const wxString& baseDirectory, const File* file) const
@@ -717,6 +844,66 @@ bool Project::LoadFileNode(const wxString& baseDirectory, wxXmlNode* node)
 
 }
 
+bool Project::LoadDirectoryNode(const wxString& baseDirectory, wxXmlNode* node)
+{
+  if (node->GetName() != "directory")
+  {
+    return false;
+  }
+  wxString directoryName;
+  wxArrayString filenames;
+  
+
+  if (ReadXmlNode(node, "directory", directoryName))
+  {
+    wxString fullDir;
+    wxFileName path(directoryName);
+    path.Normalize(wxPATH_NORM_ALL, m_baseDirectory);
+    path.MakeRelativeTo(m_baseDirectory);
+    fullDir = path.GetFullPath();
+
+    wxDir directory(m_baseDirectory + "\\" + fullDir);
+
+    Directory *dir = new Directory;
+
+    if (directory.IsOpened())
+    {
+      wxString dirPath = directory.GetName();
+
+      wxFileName name(m_baseDirectory + "\\" + fullDir);
+      name.Normalize();
+
+      dir->name = name.GetFullPath();
+      dir->path = fullDir;
+      directory.GetAllFiles(dirPath, &filenames, wxEmptyString, wxDIR_DIRS | wxDIR_FILES);
+    }
+
+    for (auto &filename : filenames)
+    {
+      File* file = new File;
+
+      file->state = CodeState_Normal;
+      file->scriptIndex = -1;
+      file->temporary = false;
+      file->status = Status_None;
+      file->fileId = ++s_lastFileId;
+
+      wxFileName localPath(filename);
+      localPath.MakeRelativeTo(dir->name);
+
+      file->localPath = localPath.GetPath();
+      file->fileName = filename;
+
+      dir->files.push_back(file);
+    }
+
+    m_directories.push_back(dir);
+  }
+
+  return true;
+
+}
+
 std::vector<Project::File*> Project::GetSortedFileList()
 {
 	struct SortByDisplayName
@@ -763,6 +950,15 @@ bool Project::SaveGeneralSettings(const wxString& fileName)
             wxXmlNode* node = SaveFileNode(baseDirectory, file);
             root->AddChild(node);
         }
+    }
+
+    for (unsigned int i = 0; i < m_directories.size(); ++i)
+    {
+      Directory* dir = m_directories[i];
+      assert(dir != NULL);
+
+      wxXmlNode* node = SaveDirectoryNode(dir);
+      root->AddChild(node);
     }
 
     return document.Save(fileName);
@@ -876,7 +1072,7 @@ bool Project::LoadGeneralSettings(const wxString& fileName)
     // Disable logging.
     wxLogNull logNo;
 
-    wxString baseDirectory = wxFileName(fileName).GetPath();
+    m_baseDirectory = wxFileName(fileName).GetPath();
 
     wxXmlDocument document;
 
@@ -896,7 +1092,11 @@ bool Project::LoadGeneralSettings(const wxString& fileName)
     
     while (node != NULL)
     {
-        LoadFileNode(baseDirectory, node);
+        if (node->GetName() == "file")
+          LoadFileNode(m_baseDirectory, node);
+        else if (node->GetName() == "directory")
+          LoadDirectoryNode(m_baseDirectory, node);
+
         node = node->GetNext();
     }
 
@@ -934,4 +1134,9 @@ bool Project::LoadSccNode(wxXmlNode* root)
 
     return true;
 
+}
+
+wxString Project::GetBaseDirectory() const
+{
+  return m_baseDirectory;
 }

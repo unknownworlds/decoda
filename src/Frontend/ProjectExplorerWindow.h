@@ -30,7 +30,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <hash_set>
 
 #include "Project.h"
-
+#include "FontColorSettings.h"
+#undef RemoveDirectory
 //
 // Forward declarations.
 //
@@ -45,6 +46,7 @@ class ProjectFilterPopup;
  */
 class ProjectExplorerWindow : public wxPanel
 {
+	friend class MainFrame;
 
 public:
 
@@ -53,8 +55,9 @@ public:
      */
     struct ItemData : public wxTreeItemData
     {
-        Project::File*      file;
+        void*               file;
         Symbol*             symbol;
+        bool                isFile;
     };
 
     enum FilterFlag
@@ -74,6 +77,12 @@ public:
      * Destructor.
      */
     virtual ~ProjectExplorerWindow();
+
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
 
     /**
      * Sets the keyboard focus to the filter text box.
@@ -137,6 +146,18 @@ public:
     wxTreeItemId GetSelection() const;
 
     /**
+    * Adds references for the directory into the explorer view. This should be
+    * called when a directory is added to the project.
+    */
+    void InsertDirectory(Project::Directory* file);
+
+    /**
+    * Removes all references to a directory from the explorer view. This should
+    * be called when a directory is deleted from the project.
+    */
+    void RemoveDirectory(Project::Directory* file);
+
+    /**
      * Adds references for the file into the explorer view. This should be
      * called when a file is added to the project.
      */
@@ -165,6 +186,12 @@ public:
      * Non-files that are selected are ignored.
      */
     void GetSelectedFiles(std::vector<Project::File*>& selectedFiles) const;
+
+
+    /**
+    * Gets a list of all of the directories that are currently selected in the tree.
+    */
+    void GetSelectedDirectories(std::vector<Project::Directory*>& selectedDirectories) const;
 
     /**
      * Updates the images showing the file status.
@@ -233,7 +260,12 @@ private:
     /**
      * Adds the items for the file that match the filter into the tree control.
      */
-    void RebuildForFile(Project::File* file);
+    void RebuildForFile(wxTreeItemId node, Project::File* file);
+
+    /**
+    * Adds the items for the file that match the filter into the tree control.
+    */
+    void RebuildForDirectory(Project::Directory *directory);
 
     /**
      * Returns the image that should be used to display the file.
@@ -288,7 +320,7 @@ private:
 
     wxMenu*                     m_contextMenu;
 
-
+    wxColor                     m_itemColor;
 };
 
 #endif
