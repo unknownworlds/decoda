@@ -503,13 +503,13 @@ void CodeEdit::HideToolTip()
 
 void CodeEdit::OnMouseLeave(wxMouseEvent& event)
 {
-    //HideToolTip();
+    HideToolTip();
     event.Skip();
 }
 
 void CodeEdit::OnKillFocus(wxFocusEvent& event)
 {
-    //AutoCompCancel();
+    AutoCompCancel();
     HideToolTip();
     event.Skip();
 }
