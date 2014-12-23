@@ -283,6 +283,15 @@ private:
      */
     void UpdateFilterButtonImage();
 
+    /**
+    * Recursively sorts all levels of the tree
+    */
+    void SortTree(wxTreeItemId node);
+
+    /**
+    * Finds a node in the tree by the file
+    */
+    wxTreeItemId FindFile(wxTreeItemId node, Project::File *file);
 private:
     
     /**
@@ -307,7 +316,7 @@ private:
     bool                        m_filterMatchAnywhere;
 
     wxTreeItemId                m_root;
-    wxTreeCtrl*                 m_tree;
+    class wxProjectTree*        m_tree;
 
     wxImageList*                m_filterImageList;
     wxBitmapButton*             m_filterButton;
@@ -321,6 +330,30 @@ private:
     wxMenu*                     m_contextMenu;
 
     wxColor                     m_itemColor;
+};
+
+
+
+#include <wx/object.h>
+class wxProjectTree : public wxTreeCtrl
+{
+  DECLARE_DYNAMIC_CLASS(wxProjectTree);
+
+public:
+  wxProjectTree() : wxTreeCtrl()
+  {}
+
+  wxProjectTree(wxWindow *parent, wxWindowID id = wxID_ANY,
+    const wxPoint& pos = wxDefaultPosition,
+    const wxSize& size = wxDefaultSize,
+    long style = wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT,
+    const wxValidator& validator = wxDefaultValidator,
+    const wxString& name = wxTreeCtrlNameStr)
+  {
+    Create(parent, id, pos, size, style, validator, name);
+  }
+
+  virtual int OnCompareItems(const wxTreeItemId &item1, const wxTreeItemId &item2);
 };
 
 #endif

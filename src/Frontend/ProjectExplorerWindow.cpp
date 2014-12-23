@@ -32,6 +32,9 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/file.h>
 #include <wx/listctrl.h>
 #include <wx/dir.h>
+#include <wx/stack.h>
+WX_DECLARE_STACK(wxTreeItemId, wxStack);
+
 #include <hash_map>
 
 #include "res/explorer.xpm"
@@ -115,7 +118,7 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
 
     gSizer1->Add( gSizer2, 1, wxEXPAND, 5  );
 
-    m_tree = new wxTreeCtrl(this, winid, wxDefaultPosition, wxDefaultSize, wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_HIDE_ROOT | wxTR_MULTIPLE | wxTR_EXTENDED);
+    m_tree = new wxProjectTree(this, winid, wxDefaultPosition, wxDefaultSize, wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_HIDE_ROOT | wxTR_MULTIPLE | wxTR_EXTENDED);
     m_tree->AssignImageList(imageList);
 
     // The "best size" for the tree component must be 0 so that the tree control doesn't
@@ -241,7 +244,7 @@ void ProjectExplorerWindow::Rebuild()
         }
     }
 
-    m_tree->SortChildren(m_tree->GetRootItem());
+    SortTree(m_tree->GetRootItem());
 
     // For whatever reason the unselect event isn't reported properly
     // after deleting all items, so explicitly clear out the info box.
@@ -603,7 +606,7 @@ void ProjectExplorerWindow::GetSelectedDirectories(std::vector<Project::Director
 void ProjectExplorerWindow::InsertDirectory(Project::Directory* directory)
 {
   RebuildForDirectory(directory);
-  m_tree->SortChildren(m_tree->GetRootItem());
+  SortTree(m_tree->GetRootItem());
 }
 
 void ProjectExplorerWindow::RemoveDirectory(Project::Directory* directory)
@@ -624,7 +627,7 @@ void ProjectExplorerWindow::RemoveDirectory(Project::Directory* directory)
 void ProjectExplorerWindow::InsertFile(Project::File* file)
 {
     RebuildForFile(m_root, file);
-    m_tree->SortChildren(m_tree->GetRootItem());
+    SortTree(m_tree->GetRootItem());
 }
 
 void ProjectExplorerWindow::RemoveFile(Project::File* file)
@@ -801,16 +804,61 @@ void ProjectExplorerWindow::OnFilterButton(wxCommandEvent& event)
 
 void ProjectExplorerWindow::UpdateFile(Project::File* file)
 {
-
     m_tree->Freeze();
 
-    RemoveFileSymbols(m_tree->GetRootItem(), file);
-    RebuildForFile(m_root, file);
+    wxArrayTreeItemIds selectedItems;
+    m_tree->GetSelections(selectedItems);
 
-    m_tree->SortChildren(m_tree->GetRootItem());
+    wxTreeItemId fileNode = FindFile(m_tree->GetRootItem(), file);
+    bool isSelected = m_tree->IsSelected(fileNode);
+    if (isSelected)
+      m_tree->UnselectItem(fileNode);
+
+    RemoveFileSymbols(m_tree->GetRootItem(), file);
+
+    //If only one item is selected, need to remove it later
+    if (isSelected && selectedItems.size() == 1)
+    {
+      selectedItems.clear();
+      m_tree->GetSelections(selectedItems);
+      //fileNode = m_tree->UnselectItem
+    }
+
+    wxTreeItemId node = m_root;
+    if (file->directoryPath.IsEmpty() == false)
+    {
+      wxStack stack;
+
+      wxTreeItemIdValue cookie;
+      wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+      wxString target = file->directoryPath;
+      
+      while (temp.IsOk())
+      {
+        if (m_tree->GetItemText(temp) == target)
+          break;
+
+        temp = m_tree->GetNextChild(temp, cookie);
+      }
+
+      if (temp.IsOk() == false)
+        temp = m_root;
+
+      node = temp;
+    }
+
+    RebuildForFile(node, file);
+    SortTree(m_tree->GetRootItem());
+    if (isSelected)
+    {
+      m_tree->SelectItem(FindFile(m_tree->GetRootItem(), file));
+
+      //Deselect the other node
+      if (selectedItems.size() == 1)
+        m_tree->SelectItem(selectedItems[0], false);
+    }
 
     m_tree->Thaw();
-
 }
 
 void ProjectExplorerWindow::SetFilterFlags(unsigned int filterFlags)
@@ -881,4 +929,77 @@ void ProjectExplorerWindow::UpdateFilterButtonImage()
 
     m_filterButton->SetBitmapLabel(bitmap);
     
+}
+
+void ProjectExplorerWindow::SortTree(wxTreeItemId node)
+{
+  m_tree->SortChildren(node);
+
+  //Sort all childen recursively
+  wxTreeItemIdValue cookie;
+  wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+  while (temp.IsOk())
+  {
+    if (m_tree->HasChildren(temp))
+    {
+      SortTree(temp);
+    }
+
+    temp = m_tree->GetNextChild(temp, cookie);
+  }
+}
+
+#include <iostream>
+#include <sstream>
+
+#define DBOUT( s )            \
+{                             \
+   std::wostringstream os_;    \
+   os_ << s;                   \
+   OutputDebugStringW( os_.str().c_str() );  \
+}
+
+
+wxTreeItemId ProjectExplorerWindow::FindFile(wxTreeItemId node, Project::File *file)
+{
+  ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(node));
+  if (data && data->isFile && data->file == file)
+  {
+    return node;
+  }
+
+  //Sort all childen recursively
+  wxTreeItemIdValue cookie;
+  wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+  while (temp.IsOk())
+  {
+    wxTreeItemId node = FindFile(temp, file);
+    if (node.IsOk())
+      return node;
+
+    temp = m_tree->GetNextChild(temp, cookie);
+  }
+
+  return wxTreeItemId();
+}
+
+
+IMPLEMENT_DYNAMIC_CLASS(wxProjectTree, wxTreeCtrl);
+int wxProjectTree::OnCompareItems(const wxTreeItemId &item1, const wxTreeItemId &item2)
+{
+  ProjectExplorerWindow::ItemData* data1 = static_cast<ProjectExplorerWindow::ItemData*>(GetItemData(item1));
+  ProjectExplorerWindow::ItemData* data2 = static_cast<ProjectExplorerWindow::ItemData*>(GetItemData(item2));
+
+  //if (data1 && data2)
+  //{
+  if (data1 && data2)
+    return GetItemText(item1).Cmp(GetItemText(item2));
+  else if (data1 || data2)
+  {
+    if (data1) return 1;
+    else return -1;
+  }
+  //}
+
+  return GetItemText(item1).Cmp(GetItemText(item2));
 }

@@ -53,7 +53,7 @@ void AutoCompleteManager::BuildFromProject(const Project* project)
     {
       Project::Directory const *directory = project->GetDirectory(directoryIndex);
 
-      for (unsigned int fileIndex = 0; fileIndex < project->GetNumFiles(); ++fileIndex)
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
       {
         BuildFromFile(directory->files[fileIndex]);
       }
@@ -75,12 +75,12 @@ void AutoCompleteManager::BuildFromFile(const Project::File* file)
 
 }
 
-void AutoCompleteManager::GetMatchingItems(const wxString& prefix, bool member, wxString& items) const
+void AutoCompleteManager::GetMatchingItems(const wxString& token, const wxString& prefix, bool member, wxString& items) const
 {
     
     // Autocompletion selection is case insensitive so transform everything
     // to lowercase.
-    wxString test = prefix.Lower();
+    wxString test = token.Lower();
 
     // Add the items to the list that begin with the specified prefix. This
     // could be done much fater with a binary search since our items are in
@@ -88,7 +88,6 @@ void AutoCompleteManager::GetMatchingItems(const wxString& prefix, bool member, 
 
     for (unsigned int i = 0; i < m_entries.size(); ++i)
     {
-
         // Check that the scope is correct.
         
         bool inScope = false;
@@ -98,7 +97,14 @@ void AutoCompleteManager::GetMatchingItems(const wxString& prefix, bool member, 
             // We've got no way of knowing the type of the variable in Lua (since
             // variables don't have types, only values have types), so we display
             // all members if the prefix contains a member selection operator (. or :)
-            inScope = (m_entries[i].scope.IsEmpty() != member);
+            if (!m_entries[i].scope.IsEmpty() && member)
+            {
+              inScope = m_entries[i].scope == prefix;
+            }
+            else
+            {
+              inScope = m_entries[i].scope.IsEmpty() != member;
+            }
         }
         
         if (inScope && m_entries[i].lowerCaseName.StartsWith(test))

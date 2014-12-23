@@ -503,13 +503,13 @@ void CodeEdit::HideToolTip()
 
 void CodeEdit::OnMouseLeave(wxMouseEvent& event)
 {
-    HideToolTip();
+    //HideToolTip();
     event.Skip();
 }
 
 void CodeEdit::OnKillFocus(wxFocusEvent& event)
 {
-    AutoCompCancel();
+    //AutoCompCancel();
     HideToolTip();
     event.Skip();
 }
@@ -670,6 +670,7 @@ void CodeEdit::StartAutoCompletion(const wxString& token)
     // If the token refers to a member, the prefix is the member name.
 
     wxString prefix;
+    wxString newToken;
     bool member = false;
 
     if (GetLexer() == wxSCI_LEX_LUA)
@@ -702,8 +703,8 @@ void CodeEdit::StartAutoCompletion(const wxString& token)
         }
 
         int end = std::max(end1, end2);
-        prefix = token.Right( token.Length() - end );
-
+        newToken = token.Right(token.Length() - end);
+        prefix = token.Left(end - 1);
     }
     else
     {
@@ -711,15 +712,15 @@ void CodeEdit::StartAutoCompletion(const wxString& token)
         return;
     }
 
-    if (!member && prefix.Length() < m_minAutoCompleteLength)
+    if (!member && newToken.Length() < m_minAutoCompleteLength)
     {
         // Don't pop up the auto completion if the user hasn't typed in very
         // much yet.
         return;
     }
 
-    m_autoCompleteManager->GetMatchingItems(prefix, member, items);
-    
+    m_autoCompleteManager->GetMatchingItems(newToken, prefix, member, items);
+
     if (!AutoCompActive() || m_autoCompleteItems != items)
     {
 
@@ -730,7 +731,7 @@ void CodeEdit::StartAutoCompletion(const wxString& token)
         if (!items.IsEmpty())
         {
             // Show the autocomplete selection list.
-            AutoCompShow(prefix.Length(), items);
+          AutoCompShow(newToken.Length(), items);
         }
         else
         {

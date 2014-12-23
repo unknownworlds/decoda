@@ -62,7 +62,7 @@ public:
      * only autocompletions that are members of some scope are included. The return items
      * string is in the format used by Scintilla to display autocompletions.
      */
-    void GetMatchingItems(const wxString& prefix, bool member, wxString& items) const;
+    void GetMatchingItems(const wxString& token, const wxString& prefix, bool member, wxString& items) const;
 
 private:
 

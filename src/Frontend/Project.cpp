@@ -413,6 +413,8 @@ Project::Directory* Project::AddDirectory(const wxString& directoryStr)
     localPath.MakeRelativeTo(dir->name);
 
     file->localPath = localPath.GetPath();
+    file->directoryPath = dir->name;
+
     file->fileName = filename;
     if (file->fileName.IsRelative())
     {
@@ -891,7 +893,8 @@ bool Project::LoadDirectoryNode(const wxString& baseDirectory, wxXmlNode* node)
       wxFileName localPath(filename);
       localPath.MakeRelativeTo(dir->name);
 
-      file->localPath = localPath.GetPath();
+      file->localPath = localPath.GetPath(); 
+      file->directoryPath = dir->name;
       file->fileName = filename;
 
       dir->files.push_back(file);

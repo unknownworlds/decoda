@@ -72,7 +72,7 @@ public:
         
         unsigned int                fileId;     // Unique id we use to match up symbol parsing results.
         std::vector<Symbol*>        symbols;
-
+        wxString                    directoryPath;
     };
 
     struct Directory

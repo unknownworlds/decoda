@@ -6152,7 +6152,7 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
 
             //Set the project to itself so we can trigger Rebuild()
             m_projectExplorer->SetProject(m_project);
-            
+            m_autoCompleteManager.BuildFromProject(m_project);
             return;
         }
     }
