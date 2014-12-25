@@ -76,6 +76,17 @@ Project::~Project()
         ClearVector(m_files[i]->symbols);
     }    
     
+    for (unsigned int i = 0; i < m_directories.size(); ++i)
+    {
+      Directory *directory = m_directories[i];
+      for (unsigned int j = 0; j < directory->files.size(); ++j)
+      {
+        File *file = directory->files[j];
+
+        ClearVector(file->symbols);
+      }
+    }
+
     ClearVector(m_files);
 
 }
@@ -444,6 +455,7 @@ Project::File* Project::AddTemporaryFile(unsigned int scriptIndex)
     file->fileName      = script->name.c_str();
     file->status        = Status_None;
     file->fileId        = ++s_lastFileId;
+    file->localPath     = "Debug Temporary Files";
 
     m_files.push_back(file);
 
@@ -531,6 +543,16 @@ void Project::CleanUpAfterSession()
         m_files[i]->scriptIndex = -1;
     }
 
+    for (unsigned int i = 0; i < m_directories.size(); ++i)
+    {
+      Directory *directory = m_directories[i];
+      for (unsigned int j = 0; j < directory->files.size(); ++j)
+      {
+        File *file = directory->files[j];
+
+        file->scriptIndex = -1;
+      }
+    }
 }
 
 Project::File* Project::GetFileForScript(unsigned int scriptIndex) const
@@ -542,6 +564,18 @@ Project::File* Project::GetFileForScript(unsigned int scriptIndex) const
         {
             return m_files[i];
         }
+    }
+
+    for (unsigned int i = 0; i < m_directories.size(); ++i)
+    {
+      Directory *directory = m_directories[i];
+      for (unsigned int j = 0; j < directory->files.size(); ++j)
+      {
+        File *file = directory->files[j];
+
+        if (file->scriptIndex == scriptIndex)
+          return file;
+      }
     }
 
     return NULL;
@@ -557,6 +591,18 @@ Project::File* Project::GetFileForFileName(const wxFileName& fileName) const
         {
             return m_files[i];
         }
+    }
+
+    for (unsigned int i = 0; i < m_directories.size(); ++i)
+    {
+      Directory *directory = m_directories[i];
+      for (unsigned int j = 0; j < directory->files.size(); ++j)
+      {
+        File *file = directory->files[j];
+
+        if (file->fileName.GetFullName().CmpNoCase(fileName.GetFullName()) == 0)
+          return file;
+      }
     }
 
     return NULL;
@@ -598,6 +644,46 @@ void Project::SetBreakpoint(unsigned int scriptIndex, unsigned int line, bool se
             }
 
         }
+    }
+
+    for (unsigned int i = 0; i < m_directories.size(); ++i)
+    {
+      Directory *directory = m_directories[i];
+      for (unsigned int j = 0; j < directory->files.size(); ++j)
+      {
+        File *file = directory->files[j];
+
+        if (file->scriptIndex == scriptIndex)
+        {
+
+          std::vector<unsigned int>::iterator iterator;
+          iterator = std::find(file->breakpoints.begin(), file->breakpoints.end(), line);
+
+          if (set)
+          {
+            if (iterator == file->breakpoints.end())
+            {
+              file->breakpoints.push_back(line);
+              if (!file->temporary)
+              {
+                m_needsUserSave = true;
+              }
+            }
+          }
+          else
+          {
+            if (iterator != file->breakpoints.end())
+            {
+              file->breakpoints.erase(iterator);
+              if (!file->temporary)
+              {
+                m_needsUserSave = true;
+              }
+            }
+          }
+
+        }
+      }
     }
 
 }

@@ -580,6 +580,11 @@ private:
         const lua_Debug scriptStack[], unsigned int scriptStackSize,
         StackEntry unifiedStack[]);
 
+    void PrintIndent();
+    void Lua_PrintIndex(unsigned long api, lua_State *L, int index);
+    void Lua_PrintTable(unsigned long api, lua_State *L, int index);
+    void Lua_stackDump(unsigned long api, lua_State *L);
+
 private:
 
     typedef stdext::hash_map<lua_State*, VirtualMachine*>   StateToVmMap;

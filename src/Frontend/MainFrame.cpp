@@ -1060,7 +1060,6 @@ void MainFrame::OnEditFindPrevious(wxCommandEvent& event)
 
 void MainFrame::OnEditFindInFiles(wxCommandEvent& event)
 {
-
     FindInFilesDialog dialog(this);
 
     dialog.AddLookIn("Current Project");
@@ -1150,6 +1149,30 @@ void MainFrame::OnEditFindInFiles(wxCommandEvent& event)
                     }
 
                 }
+            }
+
+            for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+            {
+              Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+              for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+              {
+                Project::File *file = directory->files[fileIndex];
+                if (!file->temporary)
+                {
+
+                  wxString fileName = file->fileName.GetFullPath();
+                  wxString caseFileName = fileName.Lower();
+
+                  for (unsigned int j = 0; j < fileTypesArray.Count(); ++j)
+                  {
+                    if (caseFileName.Matches(fileTypesArray[j]))
+                    {
+                      fileNames.Add(fileName);
+                    }
+                  }
+
+                }
+              }
             }
 
             baseDirectory = wxFileName(m_project->GetFileName()).GetPath();
@@ -3053,6 +3076,22 @@ bool MainFrame::ParseErrorMessage(const wxString& error, wxString& fileName, uns
                 }
 
             }
+
+            for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+            {
+              Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+              for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+              {
+                Project::File *file = directory->files[fileIndex];
+                wxString fullName = file->fileName.GetFullPath();
+
+                if (fullName.EndsWith(partialName))
+                {
+                  fileName = fullName;
+                  foundMatch = true;
+                }
+              }
+            }
         
         }
 
@@ -4936,6 +4975,43 @@ void MainFrame::DeleteAllBreakpoints()
         m_project->DeleteAllBreakpoints(file);
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        Project::File *file = directory->files[fileIndex];
+        
+        unsigned int openFileIndex = GetOpenFileIndex(file);
+        OpenFile* openFile = NULL;
+
+        if (openFileIndex != -1)
+        {
+          openFile = m_openFiles[openFileIndex];
+        }
+
+        unsigned int scriptIndex = file->scriptIndex;
+
+        for (unsigned int breakpointIndex = 0; breakpointIndex < file->breakpoints.size(); ++breakpointIndex)
+        {
+
+          unsigned int newLine = file->breakpoints[breakpointIndex];
+
+          // This file does not have a counterpart in the script debugger, so just
+          // set the break point "locally". When the debugger encounters the file
+          // we'll send it the break points.
+
+          if (openFile != NULL)
+          {
+            UpdateFileBreakpoint(openFile, newLine, false);
+          }
+
+        }
+
+        m_project->DeleteAllBreakpoints(file);
+      }
+    }
+
     DebugFrontend::Get().RemoveAllBreakPoints(0);
 
     m_breakpointsWindow->UpdateBreakpoints();
@@ -5207,6 +5283,24 @@ void MainFrame::OnThreadExit(ThreadEvent& event)
 
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        Project::File *file = directory->files[fileIndex];
+
+        stdext::hash_map<std::string, SourceControl::Status>::iterator iterator;
+        iterator = statusMap.find(std::string(file->fileName.GetFullPath()));
+
+        if (iterator != statusMap.end())
+        {
+          SourceControl::Status status = iterator->second;
+          SetFileStatus(file, status);
+        }
+      }
+    }
+
     m_projectExplorer->UpdateFileImages();
 
     m_fileStatusThread[0]->Wait();
@@ -5470,6 +5564,19 @@ void MainFrame::CleanUpTemporaryFiles()
 
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        Project::File *file = directory->files[fileIndex];
+        if (file->temporary && GetOpenFileIndex(file) == -1)
+        {
+          files.push_back(file);
+        }
+      }
+    }
+
     m_projectExplorer->RemoveFiles(files);
 
     for (unsigned int i = 0; i < files.size(); ++i)
@@ -5703,6 +5810,16 @@ void MainFrame::UpdateProjectFileStatus()
         {
             Project::File* file = m_project->GetFile(i);
             thread->AddFileName(file->fileName.GetFullPath());
+        }
+
+        for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+        {
+          Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+          for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+          {
+            Project::File *file = directory->files[fileIndex];
+            thread->AddFileName(file->fileName.GetFullPath());
+          }
         }
 
         if (thread == m_fileStatusThread[0])
@@ -6108,6 +6225,23 @@ Project::File* MainFrame::GetFileMatchingSource(const wxFileName& fileName, cons
             return file;
         }
 
+    }
+
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+
+      for (unsigned int i = 0; i < directory->files.size(); ++i)
+      {
+
+        Project::File* file = directory->files[i];
+
+        if (file->scriptIndex == -1 && file->fileName.GetFullName().CmpNoCase(fileName.GetFullName()) == 0)
+        {
+          return file;
+        }
+
+      }
     }
 
     return NULL;

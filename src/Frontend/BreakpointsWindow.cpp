@@ -132,6 +132,16 @@ void BreakpointsWindow::UpdateBreakpoints()
         {
             AddBreakpointsForFile(m_project->GetFile(i));
         }
+
+        for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+        {
+          Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+          for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+          {
+            Project::File *file = directory->files[fileIndex];
+            AddBreakpointsForFile(file);
+          }
+        }
     }
 
     m_breakpointList->Thaw();
