@@ -28,6 +28,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/thread.h>
 #include <vector>
 #include <hash_set>
+#include <functional>
 
 #include "Project.h"
 #include "FontColorSettings.h"
@@ -215,6 +216,27 @@ public:
      * explorer window. These are a combination of the FilterFlag enum values.
      */
     unsigned int GetFilterFlags() const;
+
+    /**
+    * Traverses the tree and calls the function on each item.
+    */
+    void TraverseTree(wxTreeItemId node, std::function<void(wxTreeItemId const &)> function) const;
+
+    /**
+    * Saves the current state of the tree.
+    */
+    void SaveExpansion();
+
+    /**
+    * Loads the expanded state of the tree.
+    */
+    void LoadExpansion();
+
+    /**
+    * Rebuilds the entire list in the tree control. This should be done when
+    * the filter changes.
+    */
+    void Rebuild();
     
     enum ID
     {
@@ -250,12 +272,6 @@ private:
      * Removes any child nodes of the specified node that reference the file.
      */
     void RemoveFileSymbols(wxTreeItemId node, const stdext::hash_set<Project::File*>& file);
-
-    /**
-     * Rebuilds the entire list in the tree control. This should be done when
-     * the filter changes.
-     */
-    void Rebuild();
 
     /**
      * Adds the items for the file that match the filter into the tree control.
@@ -309,27 +325,29 @@ private:
         Image_FileTempCheckedOut    = 7,
     };
 
-    Project*                    m_project;
+    Project*                     m_project;
+    std::vector<void *>          m_expandedIds;
+    bool                         m_hasFilter;
 
-    SearchTextCtrl*             m_searchBox;
-    wxString                    m_filter;
-    bool                        m_filterMatchAnywhere;
-
-    wxTreeItemId                m_root;
-    class wxProjectTree*        m_tree;
-
-    wxImageList*                m_filterImageList;
-    wxBitmapButton*             m_filterButton;
-    ProjectFilterPopup*         m_filterPopup;
-    unsigned int                m_filterFlags;
-
-    ProjectFileInfoCtrl*        m_infoBox;
-
-    wxTreeItemId                m_stopExpansion;
-
-    wxMenu*                     m_contextMenu;
-
-    wxColor                     m_itemColor;
+    SearchTextCtrl*              m_searchBox;
+    wxString                     m_filter;
+    bool                         m_filterMatchAnywhere;
+                                 
+    wxTreeItemId                 m_root;
+    class wxProjectTree*         m_tree;
+                                 
+    wxImageList*                 m_filterImageList;
+    wxBitmapButton*              m_filterButton;
+    ProjectFilterPopup*          m_filterPopup;
+    unsigned int                 m_filterFlags;
+                                 
+    ProjectFileInfoCtrl*         m_infoBox;
+                                 
+    wxTreeItemId                 m_stopExpansion;
+                                 
+    wxMenu*                      m_contextMenu;
+                                 
+    wxColor                      m_itemColor;
 };
 
 

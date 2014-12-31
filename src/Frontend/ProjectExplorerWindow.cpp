@@ -140,9 +140,9 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
 
     m_contextMenu = NULL;
     m_filterMatchAnywhere = false;
+    m_hasFilter = false;
 
     UpdateFilterButtonImage();
-
 }
 
 ProjectExplorerWindow::~ProjectExplorerWindow()
@@ -176,6 +176,7 @@ void ProjectExplorerWindow::SetFocusToFilter()
 void ProjectExplorerWindow::SetProject(Project* project)
 {
     m_project = project;
+    m_expandedIds.clear();
     Rebuild();
 }
 
@@ -207,8 +208,17 @@ wxTreeItemId ProjectExplorerWindow::GetSelection() const
 
 void ProjectExplorerWindow::OnFilterTextChanged(wxCommandEvent& event)
 {
-    
+    //No previous filter
+    if (m_hasFilter == false)
+    {
+      SaveExpansion();
+      m_hasFilter = true;
+    }
+
     m_filter = m_searchBox->GetValue();
+
+    if (m_filter.size() == 0)
+      m_hasFilter = false;
 
     // If the filter begins with a space, we'll match the text anywhere in the
     // the symbol name.
@@ -221,6 +231,20 @@ void ProjectExplorerWindow::OnFilterTextChanged(wxCommandEvent& event)
     
     Rebuild();
 
+    if (filterLength > 0)
+    {
+      //Expand all directories
+      TraverseTree(m_root, [&, this](wxTreeItemId const &item)
+      {
+        ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
+        if (!data || data->isFile == false)
+          m_tree->Expand(item);
+      });
+    }
+    else
+    {
+      LoadExpansion();
+    }
 }
 
 void ProjectExplorerWindow::Rebuild()
@@ -368,7 +392,6 @@ bool ProjectExplorerWindow::MatchesFilter(const wxString& string, const wxString
 
 void ProjectExplorerWindow::AddFile(wxTreeItemId parent, Project::File* file)
 {
-
     ItemData* data = new ItemData;
     data->file      = file;
     data->symbol    = NULL;
@@ -981,6 +1004,76 @@ wxTreeItemId ProjectExplorerWindow::FindFile(wxTreeItemId node, Project::File *f
   }
 
   return wxTreeItemId();
+}
+
+void ProjectExplorerWindow::TraverseTree(wxTreeItemId node, std::function<void(wxTreeItemId const &)> function) const
+{
+  //Go through all children in depth first order.
+  wxTreeItemIdValue cookie;
+  wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+  while (temp.IsOk())
+  {
+    TraverseTree(temp, function);
+    function(temp);
+
+    temp = m_tree->GetNextChild(temp, cookie);
+  }
+}
+
+
+void ProjectExplorerWindow::SaveExpansion()
+{
+  m_expandedIds.clear();
+
+  //Save all nodes that are expanded
+  TraverseTree(m_root, [&, this](wxTreeItemId const &item)
+  {
+    wxTreeItemId node = m_tree->GetItemParent(item);
+    ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
+
+    //If the file has a parent and it is expanded, add it to the list
+    if (node.IsOk() && data && data->isFile && m_tree->IsExpanded(node))
+    {
+      m_expandedIds.push_back(data->file);
+    }
+  });
+}
+
+void ProjectExplorerWindow::LoadExpansion()
+{
+  //Only expand the previously expanded items.
+  TraverseTree(m_root, [&, this](wxTreeItemId const &item)
+  {
+    ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
+    for (void* expand_file : m_expandedIds)
+    {
+      if (data && data->file == expand_file)
+      {
+        wxStack treeStack;
+
+        //Collect all parent nodes
+        wxTreeItemId node = m_tree->GetItemParent(item);
+        while (node.IsOk())
+        {
+          if (node != m_root)
+            treeStack.push(node);
+
+          node = m_tree->GetItemParent(node);
+        }
+
+        //Expand them in reverse order
+        while (treeStack.size() > 0)
+        {
+          node = treeStack.top();
+          treeStack.pop();
+
+          m_tree->Expand(node);
+        }
+
+        m_tree->Collapse(item);
+      }
+    }
+  });
 }
 
 

@@ -6284,8 +6284,11 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
             m_waitForFinalSymbolParse = false;
             m_statusBar->SetStatusText("", 0);
 
-            //Set the project to itself so we can trigger Rebuild()
-            m_projectExplorer->SetProject(m_project);
+            //Rebuild the project and the expansion
+            m_projectExplorer->SaveExpansion();
+            m_projectExplorer->Rebuild();
+            m_projectExplorer->LoadExpansion();
+
             m_autoCompleteManager.BuildFromProject(m_project);
             return;
         }
