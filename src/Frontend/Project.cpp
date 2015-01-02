@@ -364,14 +364,39 @@ Project::File* Project::AddFile(const wxString& fileName)
 
     if (fileName.IsEmpty())
     {
-        file->tempName = CreateTempName();
+      file->tempName = CreateTempName();
     }
+    
+    if (fileName.Contains('\\'))
+    {
+      Directory *bestDirectory = nullptr;
+      int bestCompare = 0;
 
-    m_files.push_back(file);
+      for (Directory *directory : m_directories)
+      {
+        int compare = fileName.CompareTo(directory->name);
+        if (compare > bestCompare)
+        {
+          bestDirectory = directory;
+          bestCompare = compare;
+        }
+      }
+
+      wxFileName localPath(fileName);
+      localPath.MakeRelativeTo(bestDirectory->name);
+
+      file->localPath = localPath.GetPath();
+
+      bestDirectory->files.push_back(file);
+    }
+    else
+    {
+      m_files.push_back(file);
+    }
+    
     m_needsSave = true;
     
     return file;
-
 }
 
 Project::Directory* Project::AddDirectory(const wxString& directoryStr)
@@ -500,14 +525,41 @@ void Project::RemoveFile(File* file)
             {
                 m_needsSave = true;
                 m_needsUserSave = true;
+
             }
+
+            ClearVector(file->symbols);
+            delete file;
+
             break;
         }
         ++iterator;
     }
-    
-    ClearVector(file->symbols);
-    delete file;
+
+    std::vector<Directory*>::iterator dirIterator = m_directories.begin();
+
+    while (dirIterator != m_directories.end())
+    {
+      iterator = (*dirIterator)->files.begin();
+      while (iterator != (*dirIterator)->files.end())
+      {
+        if (file == *iterator)
+        {
+          (*dirIterator)->files.erase(iterator);
+          if (!file->temporary)
+          {
+            wxRemoveFile(file->fileName.GetFullPath());
+
+            m_needsSave = true;
+            m_needsUserSave = true;
+          }
+          break;
+        }
+        ++iterator;
+      }
+
+      ++dirIterator;
+    }
 }
 
 void Project::RemoveDirectory(Directory* directory)

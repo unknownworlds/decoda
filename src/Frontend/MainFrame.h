@@ -1528,6 +1528,7 @@ private:
     SourceControl                   m_sourceControl;
 
     wxMenu*                         m_contextMenu;
+    wxMenu*                         m_directoryContextMenu;
     wxMenu*                         m_notebookTabMenu;
 
     FileStatusThread*               m_fileStatusThread[2];            

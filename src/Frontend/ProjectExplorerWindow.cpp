@@ -139,6 +139,7 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
     m_project = NULL;
 
     m_contextMenu = NULL;
+    m_directoryContextMenu = NULL;
     m_filterMatchAnywhere = false;
     m_hasFilter = false;
 
@@ -542,8 +543,17 @@ void ProjectExplorerWindow::OnTreeItemContextMenu(wxTreeEvent& event)
         if (itemData != NULL && itemData->file != NULL && itemData->symbol == NULL)
         {
             wxTreeEvent copy(event);
+            copy.SetInt(0);
             copy.SetEventType(wxEVT_TREE_CONTEXT_MENU);
             AddPendingEvent(copy);
+        }
+        //Is a basic directory
+        else if (itemData == NULL)
+        {
+          wxTreeEvent copy(event);
+          copy.SetInt(1);
+          copy.SetEventType(wxEVT_TREE_CONTEXT_MENU);
+          AddPendingEvent(copy);
         }
 
     }
@@ -740,6 +750,11 @@ void ProjectExplorerWindow::SetFileContextMenu(wxMenu* contextMenu)
     m_contextMenu = contextMenu;
 }
 
+void ProjectExplorerWindow::SetDirectoryContextMenu(wxMenu* contextMenu)
+{
+    m_directoryContextMenu = contextMenu;
+}
+
 int ProjectExplorerWindow::GetImageForFile(const Project::File* file) const
 {
 
@@ -803,7 +818,10 @@ void ProjectExplorerWindow::UpdateFileImages()
 
 void ProjectExplorerWindow::OnMenu(wxTreeEvent& event)
 {
+  if (event.GetInt() == 0)
     m_tree->PopupMenu(m_contextMenu, event.GetPoint());
+  else if (event.GetInt() == 1)
+    m_tree->PopupMenu(m_directoryContextMenu, event.GetPoint());
 }
 
 void ProjectExplorerWindow::OnFilterButton(wxCommandEvent& event)
@@ -1074,6 +1092,54 @@ void ProjectExplorerWindow::LoadExpansion()
       }
     }
   });
+}
+
+wxString ProjectExplorerWindow::GetSelectedDirectoryName()
+{
+  wxArrayTreeItemIds array;
+  m_tree->GetSelections(array);
+
+  if (array.size() != 1)
+    return wxString();
+
+  wxTreeItemId selection = array[0];
+
+  if (selection.IsOk())
+  {
+    ItemData* itemData = GetDataForItem(selection);
+
+    if (itemData == NULL)
+    {
+      wxStack treeStack;
+
+      treeStack.push(selection);
+
+      //Collect all parent nodes
+      wxTreeItemId node = m_tree->GetItemParent(selection);
+      while (node.IsOk())
+      {
+        if (node != m_root)
+          treeStack.push(node);
+
+        node = m_tree->GetItemParent(node);
+      }
+
+      wxString directory;
+      
+      //Expand them in reverse order
+      while (treeStack.size() > 0)
+      {
+        node = treeStack.top();
+        treeStack.pop();
+
+        directory += m_tree->GetItemText(node) + '\\';
+      }
+
+      return directory;
+    }
+  }
+
+  return wxString();
 }
 
 

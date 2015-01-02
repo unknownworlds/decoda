@@ -458,6 +458,11 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_projectExplorer->SetFileContextMenu(m_contextMenu);
 
+    m_directoryContextMenu = new wxMenu;
+    m_directoryContextMenu->Append(ID_ProjectAddNewFile, _("Add New File"));
+
+    m_projectExplorer->SetDirectoryContextMenu(m_directoryContextMenu);
+
     m_notebookTabMenu = new wxMenu;
     
     m_notebookTabMenu->Append(ID_NotebookTabSave,           _("&Save"));
@@ -1284,6 +1289,10 @@ void MainFrame::OnProjectAddNewFile(wxCommandEvent& WXUNUSED(event))
 
         wxFileName projectFileName(m_project->GetFileName());
         wxString projectPath = projectFileName.GetPathWithSep();
+        wxString selectedName = m_projectExplorer->GetSelectedDirectoryName();
+
+        if (selectedName.IsEmpty() == false)
+          projectPath = selectedName;
 
         // If the project hasn't been saved yet and we're using source control,
         // use the path in source control.
@@ -1324,20 +1333,28 @@ void MainFrame::OnProjectAddNewFile(wxCommandEvent& WXUNUSED(event))
                 file.Close();
                 Project::File* file = m_project->AddFile(fileName.GetFullPath());
                 
-                UpdateForNewFile(file);
-            
-                if (m_sourceControl.GetIsInitialized() && dialog.GetAddToSourceContrl())
+                if (file->localPath.IsEmpty())
                 {
+                  UpdateForNewFile(file);
+
+                  if (m_sourceControl.GetIsInitialized() && dialog.GetAddToSourceContrl())
+                  {
                     // Add the file to source control.
                     m_sourceControl.AddFiles(std::string(fileName.GetFullPath()), NULL);
-                }
+                  }
 
-                // Update the status for the new files.
-                UpdateProjectFileStatus(file);
+                  // Update the status for the new files.
+                  UpdateProjectFileStatus(file);
+                }
+                else
+                {
+                  m_projectExplorer->SaveExpansion();
+                  m_projectExplorer->Rebuild();
+                  m_projectExplorer->LoadExpansion();
+                }
 
                 // Open the file in the editor.
                 OpenProjectFile(file);
-            
             }
             else
             {
@@ -4481,6 +4498,17 @@ MainFrame::OpenFile* MainFrame::OpenProjectFile(Project::File* file)
 
 void MainFrame::DeleteProjectFile(Project::File* file)
 {
+    if (file->localPath.IsEmpty() == false)
+    {
+      wxMessageDialog *dial = new wxMessageDialog(NULL, wxT("Are you sure you want to delete this file?"), wxT("Question"),
+        wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
+
+      if (dial->ShowModal() != wxID_YES)
+      {
+        return;
+      }
+    }
+    
 
     for (unsigned int i = 0; i < m_openFiles.size(); ++i)
     {

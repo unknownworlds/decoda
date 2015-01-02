@@ -183,6 +183,12 @@ public:
     void SetFileContextMenu(wxMenu* menu);
 
     /**
+    * Sets the menu displays when the user right clicks on a directory. Ownership
+    * retains with the caller.
+    */
+    void SetDirectoryContextMenu(wxMenu* menu);
+
+    /**
      * Gets a list of all of the files that are currently selected in the tree.
      * Non-files that are selected are ignored.
      */
@@ -237,6 +243,11 @@ public:
     * the filter changes.
     */
     void Rebuild();
+
+    /**
+    * Gets the name of the selected directory.
+    */
+    wxString GetSelectedDirectoryName();
     
     enum ID
     {
@@ -346,6 +357,7 @@ private:
     wxTreeItemId                 m_stopExpansion;
                                  
     wxMenu*                      m_contextMenu;
+    wxMenu*                      m_directoryContextMenu;
                                  
     wxColor                      m_itemColor;
 };
