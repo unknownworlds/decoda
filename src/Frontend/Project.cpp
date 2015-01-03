@@ -382,12 +382,19 @@ Project::File* Project::AddFile(const wxString& fileName)
         }
       }
 
-      wxFileName localPath(fileName);
-      localPath.MakeRelativeTo(bestDirectory->name);
+      if (bestDirectory == nullptr)
+      {
+        m_files.push_back(file);
+      }
+      else
+      {
+        wxFileName localPath(fileName);
+        localPath.MakeRelativeTo(bestDirectory->name);
 
-      file->localPath = localPath.GetPath();
+        file->localPath = localPath.GetPath();
 
-      bestDirectory->files.push_back(file);
+        bestDirectory->files.push_back(file);
+      }
     }
     else
     {

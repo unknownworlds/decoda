@@ -1050,7 +1050,7 @@ void ProjectExplorerWindow::SaveExpansion()
     ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
 
     //If the file has a parent and it is expanded, add it to the list
-    if (node.IsOk() && data && data->isFile && m_tree->IsExpanded(node))
+    if (node != m_root && node.IsOk() && data && data->isFile && m_tree->IsExpanded(node))
     {
       m_expandedIds.push_back(data->file);
     }
