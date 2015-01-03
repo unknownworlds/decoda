@@ -24,6 +24,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #define BREAKPOINTS_WINDOW_H
 
 #include "Project.h"
+#include "FontColorSettings.h"
 
 #include <wx/wx.h>
 #include <wx/listctrl.h>
@@ -50,6 +51,11 @@ public:
      * Constructor.
      */
     BreakpointsWindow(MainFrame* mainFrame, wxWindowID winid);
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
 
     /**
      * Sets the project we're displaying the breakpoints for.

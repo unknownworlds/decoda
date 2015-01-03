@@ -52,6 +52,7 @@ public:
         DisplayItem_Error,
         DisplayItem_Warning,
         DisplayItem_Selection,
+        DisplayItem_Window,
         DisplayItem_Last,
     };
 

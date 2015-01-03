@@ -25,6 +25,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <wx/wx.h>
 #include "treelistctrl.h"
+#include "FontColorSettings.h"
 
 //
 // Forward declarations.
@@ -43,6 +44,11 @@ public:
 
     WatchCtrl(wxWindow *parent, wxWindowID id = -1, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize,
         long style = wxTR_HIDE_ROOT | wxTR_FULL_ROW_HIGHLIGHT | wxTR_ROW_LINES | wxTR_HAS_BUTTONS, const wxValidator &validator = wxDefaultValidator, const wxString& name = ""); 
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
 
     /**
      * Parses a compound expression ({ key = value, key = value, etc. }) and adds it's
@@ -114,7 +120,7 @@ private:
     float                       m_columnProportion;
 
     wxFont                      m_valueFont;
-
+    wxColor                     m_fontColor;
 };
 
 #endif

@@ -65,6 +65,15 @@ void SymbolParser::SetProject(Project* project)
         {
             QueueForParsing( m_project->GetFile(fileIndex) );
         }
+
+        for (unsigned int dirIndex = 0; dirIndex < m_project->GetNumDirectories(); ++dirIndex)
+        {
+          Project::Directory *directory = m_project->GetDirectory(dirIndex);
+          for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+          {
+            QueueForParsing(directory->files[fileIndex]);
+          }
+        }
     }
 
 }

@@ -28,9 +28,11 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/thread.h>
 #include <vector>
 #include <hash_set>
+#include <functional>
 
 #include "Project.h"
-
+#include "FontColorSettings.h"
+#undef RemoveDirectory
 //
 // Forward declarations.
 //
@@ -45,6 +47,7 @@ class ProjectFilterPopup;
  */
 class ProjectExplorerWindow : public wxPanel
 {
+	friend class MainFrame;
 
 public:
 
@@ -53,8 +56,9 @@ public:
      */
     struct ItemData : public wxTreeItemData
     {
-        Project::File*      file;
+        void*               file;
         Symbol*             symbol;
+        bool                isFile;
     };
 
     enum FilterFlag
@@ -74,6 +78,12 @@ public:
      * Destructor.
      */
     virtual ~ProjectExplorerWindow();
+
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
 
     /**
      * Sets the keyboard focus to the filter text box.
@@ -137,6 +147,18 @@ public:
     wxTreeItemId GetSelection() const;
 
     /**
+    * Adds references for the directory into the explorer view. This should be
+    * called when a directory is added to the project.
+    */
+    void InsertDirectory(Project::Directory* file);
+
+    /**
+    * Removes all references to a directory from the explorer view. This should
+    * be called when a directory is deleted from the project.
+    */
+    void RemoveDirectory(Project::Directory* file);
+
+    /**
      * Adds references for the file into the explorer view. This should be
      * called when a file is added to the project.
      */
@@ -161,10 +183,22 @@ public:
     void SetFileContextMenu(wxMenu* menu);
 
     /**
+    * Sets the menu displays when the user right clicks on a directory. Ownership
+    * retains with the caller.
+    */
+    void SetDirectoryContextMenu(wxMenu* menu);
+
+    /**
      * Gets a list of all of the files that are currently selected in the tree.
      * Non-files that are selected are ignored.
      */
     void GetSelectedFiles(std::vector<Project::File*>& selectedFiles) const;
+
+
+    /**
+    * Gets a list of all of the directories that are currently selected in the tree.
+    */
+    void GetSelectedDirectories(std::vector<Project::Directory*>& selectedDirectories) const;
 
     /**
      * Updates the images showing the file status.
@@ -188,6 +222,32 @@ public:
      * explorer window. These are a combination of the FilterFlag enum values.
      */
     unsigned int GetFilterFlags() const;
+
+    /**
+    * Traverses the tree and calls the function on each item.
+    */
+    void TraverseTree(wxTreeItemId node, std::function<void(wxTreeItemId const &)> function) const;
+
+    /**
+    * Saves the current state of the tree.
+    */
+    void SaveExpansion();
+
+    /**
+    * Loads the expanded state of the tree.
+    */
+    void LoadExpansion();
+
+    /**
+    * Rebuilds the entire list in the tree control. This should be done when
+    * the filter changes.
+    */
+    void Rebuild();
+
+    /**
+    * Gets the name of the selected directory.
+    */
+    wxString GetSelectedDirectoryName();
     
     enum ID
     {
@@ -225,15 +285,14 @@ private:
     void RemoveFileSymbols(wxTreeItemId node, const stdext::hash_set<Project::File*>& file);
 
     /**
-     * Rebuilds the entire list in the tree control. This should be done when
-     * the filter changes.
-     */
-    void Rebuild();
-
-    /**
      * Adds the items for the file that match the filter into the tree control.
      */
-    void RebuildForFile(Project::File* file);
+    void RebuildForFile(wxTreeItemId node, Project::File* file);
+
+    /**
+    * Adds the items for the file that match the filter into the tree control.
+    */
+    void RebuildForDirectory(Project::Directory *directory);
 
     /**
      * Returns the image that should be used to display the file.
@@ -251,6 +310,15 @@ private:
      */
     void UpdateFilterButtonImage();
 
+    /**
+    * Recursively sorts all levels of the tree
+    */
+    void SortTree(wxTreeItemId node);
+
+    /**
+    * Finds a node in the tree by the file
+    */
+    wxTreeItemId FindFile(wxTreeItemId node, Project::File *file);
 private:
     
     /**
@@ -268,27 +336,54 @@ private:
         Image_FileTempCheckedOut    = 7,
     };
 
-    Project*                    m_project;
+    Project*                     m_project;
+    std::vector<void *>          m_expandedIds;
+    bool                         m_hasFilter;
 
-    SearchTextCtrl*             m_searchBox;
-    wxString                    m_filter;
-    bool                        m_filterMatchAnywhere;
+    SearchTextCtrl*              m_searchBox;
+    wxString                     m_filter;
+    bool                         m_filterMatchAnywhere;
+                                 
+    wxTreeItemId                 m_root;
+    class wxProjectTree*         m_tree;
+                                 
+    wxImageList*                 m_filterImageList;
+    wxBitmapButton*              m_filterButton;
+    ProjectFilterPopup*          m_filterPopup;
+    unsigned int                 m_filterFlags;
+                                 
+    ProjectFileInfoCtrl*         m_infoBox;
+                                 
+    wxTreeItemId                 m_stopExpansion;
+                                 
+    wxMenu*                      m_contextMenu;
+    wxMenu*                      m_directoryContextMenu;
+                                 
+    wxColor                      m_itemColor;
+};
 
-    wxTreeItemId                m_root;
-    wxTreeCtrl*                 m_tree;
-
-    wxImageList*                m_filterImageList;
-    wxBitmapButton*             m_filterButton;
-    ProjectFilterPopup*         m_filterPopup;
-    unsigned int                m_filterFlags;
-
-    ProjectFileInfoCtrl*        m_infoBox;
-
-    wxTreeItemId                m_stopExpansion;
-
-    wxMenu*                     m_contextMenu;
 
 
+#include <wx/object.h>
+class wxProjectTree : public wxTreeCtrl
+{
+  DECLARE_DYNAMIC_CLASS(wxProjectTree);
+
+public:
+  wxProjectTree() : wxTreeCtrl()
+  {}
+
+  wxProjectTree(wxWindow *parent, wxWindowID id = wxID_ANY,
+    const wxPoint& pos = wxDefaultPosition,
+    const wxSize& size = wxDefaultSize,
+    long style = wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT,
+    const wxValidator& validator = wxDefaultValidator,
+    const wxString& name = wxTreeCtrlNameStr)
+  {
+    Create(parent, id, pos, size, style, validator, name);
+  }
+
+  virtual int OnCompareItems(const wxTreeItemId &item1, const wxTreeItemId &item2);
 };
 
 #endif

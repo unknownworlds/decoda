@@ -25,7 +25,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <wx/xml/xml.h>
 
-const char* FontColorSettings::s_displayItemName[] = { "Default", "Comment", "Keyword", "Operator", "String", "Number", "Error", "Warning", "Selection" };
+const char* FontColorSettings::s_displayItemName[] = { "Default", "Comment", "Keyword", "Operator", "String", "Number", "Error", "Warning", "Selection", "Window" };
 
 FontColorSettings::FontColorSettings()
 {
@@ -76,6 +76,11 @@ FontColorSettings::FontColorSettings()
     m_colors[DisplayItem_Selection].backColor   = wxColor(0x0A, 0x24, 0x6A);
     m_colors[DisplayItem_Selection].bold        = false;
     m_colors[DisplayItem_Selection].italic      = false;
+
+    m_colors[DisplayItem_Window].foreColor = wxColor(255,255,255);
+    m_colors[DisplayItem_Window].backColor = wxColor(51,51,51);
+    m_colors[DisplayItem_Window].bold = false;
+    m_colors[DisplayItem_Window].italic = false;
 
 }
 
