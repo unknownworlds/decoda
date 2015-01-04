@@ -95,10 +95,18 @@ BreakpointsWindow::BreakpointsWindow(MainFrame* mainFrame, wxWindowID winid)
 	
 	fgSizer1->Add( m_buttonBar, 0, wxALL|wxEXPAND, 3 );
 	fgSizer1->Add( m_breakpointList, 0, wxALL|wxEXPAND, 0 );
-	
+
+  
+
 	SetSizer( fgSizer1 );
 	Layout();
 
+}
+
+void BreakpointsWindow::SetFontColorSettings(const FontColorSettings& settings)
+{
+  m_breakpointList->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_breakpointList->SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
 }
 
 void BreakpointsWindow::SetProject(Project* project)
@@ -123,6 +131,16 @@ void BreakpointsWindow::UpdateBreakpoints()
         for (unsigned int i = 0; i < m_project->GetNumFiles(); ++i)
         {
             AddBreakpointsForFile(m_project->GetFile(i));
+        }
+
+        for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+        {
+          Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+          for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+          {
+            Project::File *file = directory->files[fileIndex];
+            AddBreakpointsForFile(file);
+          }
         }
     }
 

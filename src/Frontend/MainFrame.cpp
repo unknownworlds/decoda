@@ -67,6 +67,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/txtstrm.h>
 #include <wx/xml/xml.h>
 #include <wx/fontdlg.h>
+#include <wx/dirdlg.h>
 #include <wx/file.h>
 #include <wx/dir.h>
 #include <wx/wfstream.h>
@@ -132,6 +133,7 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     
     // Project menu events.
     EVT_MENU(ID_ProjectAddExistingFile,             MainFrame::OnProjectAddExistingFile)
+    EVT_MENU(ID_ProjectAddDirectory,                MainFrame::OnProjectAddDirectory)
     EVT_MENU(ID_ProjectAddNewFile,                  MainFrame::OnProjectAddNewFile)
     EVT_MENU(ID_ProjectSettings,                    MainFrame::OnProjectSettings)
     EVT_MENU(ID_FileNewProject,                     MainFrame::OnFileNewProject)
@@ -275,6 +277,7 @@ BEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_COMMAND(wxID_ANY, wxEVT_UPDATE_INFO_EVENT,  MainFrame::OnUpdateInfo)
 
     EVT_SYMBOL_PARSER(                              MainFrame::OnSymbolsParsed)
+    //EVT_SYMBOL_PARSER(                              MainFrame::OnSymbolsParsed)
 
 END_EVENT_TABLE()
 
@@ -455,6 +458,11 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_projectExplorer->SetFileContextMenu(m_contextMenu);
 
+    m_directoryContextMenu = new wxMenu;
+    m_directoryContextMenu->Append(ID_ProjectAddNewFile, _("Add New File"));
+
+    m_projectExplorer->SetDirectoryContextMenu(m_directoryContextMenu);
+
     m_notebookTabMenu = new wxMenu;
     
     m_notebookTabMenu->Append(ID_NotebookTabSave,           _("&Save"));
@@ -490,6 +498,7 @@ MainFrame::MainFrame(const wxString& title, int openFilesMessage, const wxPoint&
 
     m_symbolParser = new SymbolParser;
     m_symbolParser->SetEventHandler(this);
+
     m_waitForFinalSymbolParse = false;
 
     // Creating a new project will clear this out, so save it.
@@ -630,6 +639,7 @@ void MainFrame::InitializeMenu()
     menuProject->AppendSeparator();
     menuProject->Append(ID_ProjectAddNewFile,           _("Add Ne&w File..."));
     menuProject->Append(ID_ProjectAddExistingFile,      _("Add Existin&g File..."));
+    menuProject->Append(ID_ProjectAddDirectory,         _("Add Directory..."));
     menuProject->AppendSeparator();
     menuProject->AppendSubMenu(menuRecentProjects,      _("&Recent Files..."));
     menuProject->AppendSeparator();
@@ -709,7 +719,6 @@ void MainFrame::InitializeMenu()
     menuBar->Append( menuHelp,                          _("&Help"));
 
     SetMenuBar( menuBar );
-
 }
 
 void MainFrame::OnFileNewProject(wxCommandEvent& WXUNUSED(event))
@@ -1056,7 +1065,6 @@ void MainFrame::OnEditFindPrevious(wxCommandEvent& event)
 
 void MainFrame::OnEditFindInFiles(wxCommandEvent& event)
 {
-
     FindInFilesDialog dialog(this);
 
     dialog.AddLookIn("Current Project");
@@ -1146,6 +1154,30 @@ void MainFrame::OnEditFindInFiles(wxCommandEvent& event)
                     }
 
                 }
+            }
+
+            for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+            {
+              Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+              for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+              {
+                Project::File *file = directory->files[fileIndex];
+                if (!file->temporary)
+                {
+
+                  wxString fileName = file->fileName.GetFullPath();
+                  wxString caseFileName = fileName.Lower();
+
+                  for (unsigned int j = 0; j < fileTypesArray.Count(); ++j)
+                  {
+                    if (caseFileName.Matches(fileTypesArray[j]))
+                    {
+                      fileNames.Add(fileName);
+                    }
+                  }
+
+                }
+              }
             }
 
             baseDirectory = wxFileName(m_project->GetFileName()).GetPath();
@@ -1257,6 +1289,10 @@ void MainFrame::OnProjectAddNewFile(wxCommandEvent& WXUNUSED(event))
 
         wxFileName projectFileName(m_project->GetFileName());
         wxString projectPath = projectFileName.GetPathWithSep();
+        wxString selectedName = m_projectExplorer->GetSelectedDirectoryName();
+
+        if (selectedName.IsEmpty() == false)
+          projectPath = selectedName;
 
         // If the project hasn't been saved yet and we're using source control,
         // use the path in source control.
@@ -1297,20 +1333,28 @@ void MainFrame::OnProjectAddNewFile(wxCommandEvent& WXUNUSED(event))
                 file.Close();
                 Project::File* file = m_project->AddFile(fileName.GetFullPath());
                 
-                UpdateForNewFile(file);
-            
-                if (m_sourceControl.GetIsInitialized() && dialog.GetAddToSourceContrl())
+                if (file->localPath.IsEmpty())
                 {
+                  UpdateForNewFile(file);
+
+                  if (m_sourceControl.GetIsInitialized() && dialog.GetAddToSourceContrl())
+                  {
                     // Add the file to source control.
                     m_sourceControl.AddFiles(std::string(fileName.GetFullPath()), NULL);
-                }
+                  }
 
-                // Update the status for the new files.
-                UpdateProjectFileStatus(file);
+                  // Update the status for the new files.
+                  UpdateProjectFileStatus(file);
+                }
+                else
+                {
+                  m_projectExplorer->SaveExpansion();
+                  m_projectExplorer->Rebuild();
+                  m_projectExplorer->LoadExpansion();
+                }
 
                 // Open the file in the editor.
                 OpenProjectFile(file);
-            
             }
             else
             {
@@ -1351,6 +1395,29 @@ void MainFrame::OnProjectAddExistingFile(wxCommandEvent& WXUNUSED(event))
         }
         
     }
+
+}
+
+void MainFrame::OnProjectAddDirectory(wxCommandEvent& event)
+{
+  wxDirDialog dialog(this, _("Add Directory"), m_project->GetBaseDirectory(), wxDD_DEFAULT_STYLE);
+
+  if (dialog.ShowModal() == wxID_OK)
+  {
+    Project::Directory *directory = m_project->AddDirectory(dialog.GetPath());
+    
+    m_projectExplorer->InsertDirectory(directory);
+
+    for (Project::File *file : directory->files)
+    {
+      m_symbolParser->QueueForParsing(file);
+      m_autoCompleteManager.BuildFromProject(m_project);
+
+      // Update the status for the new files.
+      UpdateProjectFileStatus(file);
+    }
+  }
+
 
 }
 
@@ -3026,6 +3093,22 @@ bool MainFrame::ParseErrorMessage(const wxString& error, wxString& fileName, uns
                 }
 
             }
+
+            for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+            {
+              Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+              for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+              {
+                Project::File *file = directory->files[fileIndex];
+                wxString fullName = file->fileName.GetFullPath();
+
+                if (fullName.EndsWith(partialName))
+                {
+                  fileName = fullName;
+                  foundMatch = true;
+                }
+              }
+            }
         
         }
 
@@ -3257,14 +3340,14 @@ void MainFrame::OnProjectExplorerItemActivated(wxTreeEvent& event)
     
     ProjectExplorerWindow::ItemData* data = m_projectExplorer->GetDataForItem(item);
 
-    if (data != NULL && data->file != NULL)
+    if (data != NULL && data->file != NULL && data->isFile)
     {
-
-        OpenFile* file = OpenProjectFile(data->file);
+        Project::File *dataFile = (Project::File *)data->file;
+        OpenFile* file = OpenProjectFile(dataFile);
 
         if (file == NULL)
         {
-            wxMessageBox(wxString::Format("The file '%s' could not be opened.", data->file->fileName.GetFullPath()));
+            wxMessageBox(wxString::Format("The file '%s' could not be opened.", dataFile->fileName.GetFullPath()));
         }
         else
         {
@@ -3296,6 +3379,14 @@ void MainFrame::OnProjectExplorerKeyDown(wxTreeEvent& event)
                 DeleteProjectFile(files[i]);
                 alltemp = false;
             }
+        }
+
+        std::vector<Project::Directory*> directories;
+        m_projectExplorer->GetSelectedDirectories(directories);
+        for (unsigned int i = 0; i < directories.size(); ++i)
+        {
+          DeleteProjectDirectory(directories[i]);
+          alltemp = false;
         }
 
         if (alltemp)
@@ -4407,6 +4498,17 @@ MainFrame::OpenFile* MainFrame::OpenProjectFile(Project::File* file)
 
 void MainFrame::DeleteProjectFile(Project::File* file)
 {
+    if (file->localPath.IsEmpty() == false)
+    {
+      wxMessageDialog *dial = new wxMessageDialog(NULL, wxT("Are you sure you want to delete this file?"), wxT("Question"),
+        wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
+
+      if (dial->ShowModal() != wxID_YES)
+      {
+        return;
+      }
+    }
+    
 
     for (unsigned int i = 0; i < m_openFiles.size(); ++i)
     {
@@ -4423,6 +4525,27 @@ void MainFrame::DeleteProjectFile(Project::File* file)
     m_project->RemoveFile(file);
     m_breakpointsWindow->RemoveFile(file);
 
+}
+
+void MainFrame::DeleteProjectDirectory(Project::Directory* directory)
+{
+  for (Project::File *file : directory->files)
+  {
+    for (unsigned int i = 0; i < m_openFiles.size(); ++i)
+    {
+      if (m_openFiles[i]->file == file)
+      {
+        m_notebook->DeletePage(i);
+        m_openFiles.erase(m_openFiles.begin() + i);
+        RemovePageFromTabOrder(i);
+        break;
+      }
+    }
+    m_breakpointsWindow->RemoveFile(file);
+  }
+
+  m_projectExplorer->RemoveDirectory(directory);
+  m_project->RemoveDirectory(directory);
 }
 
 void MainFrame::AddVmToList(unsigned int vm)
@@ -4670,7 +4793,18 @@ void MainFrame::UpdateEditorOptions()
     }
 
     // Set the font of the output window to match the code editor.
+    m_mgr.GetArtProvider()->SetColor(wxAUI_DOCKART_SASH_COLOUR, m_fontColorSettings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+
+    m_searchWindow->SetFontColorSettings(m_fontColorSettings);
+    m_breakpointsWindow->SetFontColorSettings(m_fontColorSettings);
+    m_projectExplorer->SetFontColorSettings(m_fontColorSettings);
     m_output->SetFontColorSettings(m_fontColorSettings);
+    m_watch->SetFontColorSettings(m_fontColorSettings);
+    m_callStack->SetFontColorSettings(m_fontColorSettings);
+    m_vmList->SetFontColorSettings(m_fontColorSettings);
+
+    //Have to repaint to get the sash color.
+    this->Refresh();
 
     // Set the font of the watch window to match the code editor so
     // that non-ASCII text will be displayed properly.
@@ -4867,6 +5001,43 @@ void MainFrame::DeleteAllBreakpoints()
         }
 
         m_project->DeleteAllBreakpoints(file);
+    }
+
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        Project::File *file = directory->files[fileIndex];
+        
+        unsigned int openFileIndex = GetOpenFileIndex(file);
+        OpenFile* openFile = NULL;
+
+        if (openFileIndex != -1)
+        {
+          openFile = m_openFiles[openFileIndex];
+        }
+
+        unsigned int scriptIndex = file->scriptIndex;
+
+        for (unsigned int breakpointIndex = 0; breakpointIndex < file->breakpoints.size(); ++breakpointIndex)
+        {
+
+          unsigned int newLine = file->breakpoints[breakpointIndex];
+
+          // This file does not have a counterpart in the script debugger, so just
+          // set the break point "locally". When the debugger encounters the file
+          // we'll send it the break points.
+
+          if (openFile != NULL)
+          {
+            UpdateFileBreakpoint(openFile, newLine, false);
+          }
+
+        }
+
+        m_project->DeleteAllBreakpoints(file);
+      }
     }
 
     DebugFrontend::Get().RemoveAllBreakPoints(0);
@@ -5140,6 +5311,24 @@ void MainFrame::OnThreadExit(ThreadEvent& event)
 
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        Project::File *file = directory->files[fileIndex];
+
+        stdext::hash_map<std::string, SourceControl::Status>::iterator iterator;
+        iterator = statusMap.find(std::string(file->fileName.GetFullPath()));
+
+        if (iterator != statusMap.end())
+        {
+          SourceControl::Status status = iterator->second;
+          SetFileStatus(file, status);
+        }
+      }
+    }
+
     m_projectExplorer->UpdateFileImages();
 
     m_fileStatusThread[0]->Wait();
@@ -5403,6 +5592,19 @@ void MainFrame::CleanUpTemporaryFiles()
 
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+      for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+      {
+        Project::File *file = directory->files[fileIndex];
+        if (file->temporary && GetOpenFileIndex(file) == -1)
+        {
+          files.push_back(file);
+        }
+      }
+    }
+
     m_projectExplorer->RemoveFiles(files);
 
     for (unsigned int i = 0; i < files.size(); ++i)
@@ -5636,6 +5838,16 @@ void MainFrame::UpdateProjectFileStatus()
         {
             Project::File* file = m_project->GetFile(i);
             thread->AddFileName(file->fileName.GetFullPath());
+        }
+
+        for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+        {
+          Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+          for (unsigned int fileIndex = 0; fileIndex < directory->files.size(); ++fileIndex)
+          {
+            Project::File *file = directory->files[fileIndex];
+            thread->AddFileName(file->fileName.GetFullPath());
+          }
         }
 
         if (thread == m_fileStatusThread[0])
@@ -6043,6 +6255,23 @@ Project::File* MainFrame::GetFileMatchingSource(const wxFileName& fileName, cons
 
     }
 
+    for (unsigned int directoryIndex = 0; directoryIndex < m_project->GetNumDirectories(); ++directoryIndex)
+    {
+      Project::Directory *directory = m_project->GetDirectory(directoryIndex);
+
+      for (unsigned int i = 0; i < directory->files.size(); ++i)
+      {
+
+        Project::File* file = directory->files[i];
+
+        if (file->scriptIndex == -1 && file->fileName.GetFullName().CmpNoCase(fileName.GetFullName()) == 0)
+        {
+          return file;
+        }
+
+      }
+    }
+
     return NULL;
 
 }
@@ -6083,9 +6312,12 @@ void MainFrame::OnSymbolsParsed(SymbolParserEvent& event)
             m_waitForFinalSymbolParse = false;
             m_statusBar->SetStatusText("", 0);
 
-            //Set the project to itself so we can trigger Rebuild()
-            m_projectExplorer->SetProject(m_project);
-            
+            //Rebuild the project and the expansion
+            m_projectExplorer->SaveExpansion();
+            m_projectExplorer->Rebuild();
+            m_projectExplorer->LoadExpansion();
+
+            m_autoCompleteManager.BuildFromProject(m_project);
             return;
         }
     }

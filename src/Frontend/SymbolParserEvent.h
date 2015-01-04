@@ -37,7 +37,7 @@ class Symbol;
 // Event definitions.
 //
 
-DECLARE_EVENT_TYPE(wxEVT_SYMBOL_PARSER_EVENT, -1)
+DECLARE_EVENT_TYPE(wxEVT_SYMBOL_PARSER_EVENT, wxID_ANY)
 
 /**
  * Class for events sent by the symbol parser thread. This doesn't really handle
@@ -86,7 +86,7 @@ private:
 typedef void (wxEvtHandler::*SymbolParserEventFunction)(SymbolParserEvent&);
 
 #define EVT_SYMBOL_PARSER(fn) \
-    DECLARE_EVENT_TABLE_ENTRY( wxEVT_SYMBOL_PARSER_EVENT, 0, -1, \
+    DECLARE_EVENT_TABLE_ENTRY( wxEVT_SYMBOL_PARSER_EVENT, wxID_ANY, wxID_ANY, \
     (wxObjectEventFunction) (wxEventFunction) wxStaticCastEvent( SymbolParserEventFunction, & fn ), (wxObject *) NULL ),
 
 #endif

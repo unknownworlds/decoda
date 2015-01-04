@@ -46,18 +46,18 @@ void OutputWindow::SetFontColorSettings(const FontColorSettings& settings)
     // happens often enough for it to really make much difference.
     Clear();
 
-    SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Default).backColor);
+    SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
 
-    m_messageAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Default).foreColor);
-    m_messageAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Default).backColor);
-    m_messageAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Default));
+    m_messageAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor);
+    m_messageAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+    m_messageAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Window));
 
     m_warningAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Warning).foreColor);
-    m_warningAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Warning).backColor);
+    m_warningAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
     m_warningAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Warning));
     
     m_errorAttr.SetTextColour(settings.GetColors(FontColorSettings::DisplayItem_Error).foreColor);
-    m_errorAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Error).backColor);
+    m_errorAttr.SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
     m_errorAttr.SetFont(settings.GetFont(FontColorSettings::DisplayItem_Error));
 
 }

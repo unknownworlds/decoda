@@ -52,7 +52,12 @@ WatchCtrl::WatchCtrl(wxWindow *parent, wxWindowID id, const wxPoint& pos, const 
 
     m_vm = 0;
     m_stackLevel = 0;
+}
 
+void WatchCtrl::SetFontColorSettings(const FontColorSettings& settings)
+{
+  SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_fontColor = settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor;
 }
 
 void WatchCtrl::SetValueFont(const wxFont& font)
@@ -73,7 +78,8 @@ void WatchCtrl::UpdateFont(wxTreeItemId item)
 
         SetItemFont( item, m_valueFont );
         UpdateFont( GetNextSibling(item) );
-
+        SetItemTextColour(item, m_fontColor);
+        
         wxTreeItemIdValue cookie;
         wxTreeItemId child = GetFirstChild(item, cookie);
 

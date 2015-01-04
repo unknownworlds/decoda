@@ -30,6 +30,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <vector>
 
+#undef RemoveDirectory
 // 
 // Forward declarations.
 //
@@ -61,6 +62,7 @@ public:
         CodeState                   state;
         bool                        temporary;
         unsigned int                scriptIndex;
+        wxString                    localPath;
         wxFileName                  fileName;
         std::vector<unsigned int>   breakpoints;
         wxString                    tempName;
@@ -70,7 +72,22 @@ public:
         
         unsigned int                fileId;     // Unique id we use to match up symbol parsing results.
         std::vector<Symbol*>        symbols;
+        wxString                    directoryPath;
+    };
 
+    struct Directory
+    {
+      ~Directory()
+      {
+        for (File *p : files)
+        {
+          delete p;
+        }
+      }
+
+      wxString path;
+      wxString name;
+      std::vector<File *> files;
     };
 
     /**
@@ -226,6 +243,11 @@ public:
     File* AddFile(const wxString& fileName);
 
     /**
+    * Adds a directory to the project. The new directory is returned.
+    */
+    Directory* AddDirectory(const wxString& fileName);
+
+    /**
      * Adds a script to the project temporarily (during this debug sesssion). The
      * new file is returned.
      */
@@ -243,6 +265,11 @@ public:
     void RemoveFile(File* file);
 
     /**
+    * Removes a directory from the project.
+    */
+    void RemoveDirectory(Directory* directory);
+
+    /**
      * Gets the specified file.
      */
     File* GetFile(unsigned int fileIndex);
@@ -251,6 +278,17 @@ public:
      * Gets the specified file.
      */
     const File* GetFile(unsigned int fileIndex) const;
+
+
+    /**
+    * Gets the specified directory.
+    */
+    Directory* GetDirectory(unsigned int dirIndex);
+
+    /**
+    * Gets the specified directory.
+    */
+    const Directory *GetDirectory(unsigned int dirIndex) const;
 
     /**
      * Returns the file with the specified file id, or NULL if the file doesn't
@@ -262,6 +300,12 @@ public:
      * Gets the number of files in the project.
      */
     unsigned int GetNumFiles() const;
+
+    /**
+    * Gets the number of directories in the project.
+    */
+    unsigned int GetNumDirectories() const;
+
 
     /**
      * Clears the script indices for all of the files.
@@ -285,6 +329,11 @@ public:
      */
     void DeleteAllBreakpoints(File* file);
 
+    /**
+    * Gets the base directory path
+    */
+    wxString GetBaseDirectory() const;
+
 private:
 
     /**
@@ -293,6 +342,12 @@ private:
      */
     wxXmlNode* SaveFileNode(const wxString& baseDirectory, const File* file);
     
+    /**
+    * Creates a new XML node representing a directory. The directory name is stored
+      relative to the project.
+    */
+    wxXmlNode* SaveDirectoryNode(const Directory* file);
+
     /**
      * Creates a new XML node representing the user settings for a  file. The
      * file name is stored relative to the specified base directory.
@@ -306,6 +361,8 @@ private:
      * directory.
      */
     bool LoadFileNode(const wxString& baseDirectory, wxXmlNode* node);
+
+    bool LoadDirectoryNode(const wxString& baseDirectory, wxXmlNode* node);
 
     /**
      * Loads the user data for a file from an XML node. If the XML node is not 
@@ -363,27 +420,28 @@ private:
 	// Returns vector for temporary internal use
 	std::vector<File*>		GetSortedFileList();
 
-    static unsigned int     s_lastFileId;
-
-    bool                    m_needsSave;
-    bool                    m_needsUserSave;
-    wxString                m_fileName;
-
-    wxString                m_commandLine;
-    wxString                m_commandArguments;
-    wxString                m_workingDirectory;
-    wxString                m_symbolsDirectory;
-
-    std::vector<File*>      m_files;
-
-    unsigned int            m_tempIndex;
-
-    wxString                m_sccProvider;
-    wxString                m_sccUser;
-    wxString                m_sccProjName;
-    wxString                m_sccLocalPath;
-    wxString                m_sccAuxProjPath;
-
+    static unsigned int      s_lastFileId;
+                             
+    bool                     m_needsSave;
+    bool                     m_needsUserSave;
+    wxString                 m_fileName;
+                             
+    wxString                 m_commandLine;
+    wxString                 m_commandArguments;
+    wxString                 m_workingDirectory;
+    wxString                 m_symbolsDirectory;
+                             
+    std::vector<File*>       m_files;
+    std::vector<Directory *> m_directories;
+                             
+    unsigned int             m_tempIndex;
+                             
+    wxString                 m_sccProvider;
+    wxString                 m_sccUser;
+    wxString                 m_sccProjName;
+    wxString                 m_sccLocalPath;
+    wxString                 m_sccAuxProjPath;
+    wxString                 m_baseDirectory;
 };
 
 #endif

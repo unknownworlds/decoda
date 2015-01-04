@@ -31,6 +31,10 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <wx/file.h>
 #include <wx/listctrl.h>
+#include <wx/dir.h>
+#include <wx/stack.h>
+WX_DECLARE_STACK(wxTreeItemId, wxStack);
+
 #include <hash_map>
 
 #include "res/explorer.xpm"
@@ -104,7 +108,7 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
     gSizer2->AddGrowableRow( 0 );
     gSizer2->SetFlexibleDirection( wxBOTH );
 
-    m_searchBox = new SearchTextCtrl( this, ID_Filter, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+    m_searchBox = new SearchTextCtrl(this, ID_Filter, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_RICH);
     
     m_filterButton = new wxBitmapButton( this, ID_FilterButton, wxNullBitmap, wxDefaultPosition, wxSize(18, 17), 0 );
     m_filterPopup  = NULL;
@@ -114,7 +118,7 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
 
     gSizer1->Add( gSizer2, 1, wxEXPAND, 5  );
 
-    m_tree = new wxTreeCtrl(this, winid, wxDefaultPosition, wxDefaultSize, wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_HIDE_ROOT | wxTR_MULTIPLE | wxTR_EXTENDED);
+    m_tree = new wxProjectTree(this, winid, wxDefaultPosition, wxDefaultSize, wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_HIDE_ROOT | wxTR_MULTIPLE | wxTR_EXTENDED);
     m_tree->AssignImageList(imageList);
 
     // The "best size" for the tree component must be 0 so that the tree control doesn't
@@ -135,15 +139,32 @@ ProjectExplorerWindow::ProjectExplorerWindow(wxWindow* parent, wxWindowID winid)
     m_project = NULL;
 
     m_contextMenu = NULL;
+    m_directoryContextMenu = NULL;
     m_filterMatchAnywhere = false;
+    m_hasFilter = false;
 
     UpdateFilterButtonImage();
-
 }
 
 ProjectExplorerWindow::~ProjectExplorerWindow()
 {
     delete m_filterImageList;
+}
+
+
+void ProjectExplorerWindow::SetFontColorSettings(const FontColorSettings& settings)
+{
+  SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_tree->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+
+  m_searchBox->SetBackgroundColour(settings.GetColors(FontColorSettings::DisplayItem_Window).backColor);
+  m_searchBox->SetDefaultStyle(wxTextAttr(settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor));
+
+  m_infoBox->SetFontColorSettings(settings);
+
+  m_itemColor = settings.GetColors(FontColorSettings::DisplayItem_Window).foreColor;
+
+  Rebuild();
 }
 
 void ProjectExplorerWindow::SetFocusToFilter()
@@ -156,13 +177,17 @@ void ProjectExplorerWindow::SetFocusToFilter()
 void ProjectExplorerWindow::SetProject(Project* project)
 {
     m_project = project;
+    m_expandedIds.clear();
     Rebuild();
 }
 
 ProjectExplorerWindow::ItemData* ProjectExplorerWindow::GetDataForItem(wxTreeItemId id) const
 {
-    ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(id));
-    return data;
+  ItemData* data = nullptr;
+  if (id.IsOk())
+    data =static_cast<ItemData*>(m_tree->GetItemData(id));
+  
+  return data;
 }
 
 wxTreeItemId ProjectExplorerWindow::GetSelection() const
@@ -184,8 +209,17 @@ wxTreeItemId ProjectExplorerWindow::GetSelection() const
 
 void ProjectExplorerWindow::OnFilterTextChanged(wxCommandEvent& event)
 {
-    
+    //No previous filter
+    if (m_hasFilter == false)
+    {
+      SaveExpansion();
+      m_hasFilter = true;
+    }
+
     m_filter = m_searchBox->GetValue();
+
+    if (m_filter.size() == 0)
+      m_hasFilter = false;
 
     // If the filter begins with a space, we'll match the text anywhere in the
     // the symbol name.
@@ -198,6 +232,20 @@ void ProjectExplorerWindow::OnFilterTextChanged(wxCommandEvent& event)
     
     Rebuild();
 
+    if (filterLength > 0)
+    {
+      //Expand all directories
+      TraverseTree(m_root, [&, this](wxTreeItemId const &item)
+      {
+        ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
+        if (!data || data->isFile == false)
+          m_tree->Expand(item);
+      });
+    }
+    else
+    {
+      LoadExpansion();
+    }
 }
 
 void ProjectExplorerWindow::Rebuild()
@@ -210,13 +258,18 @@ void ProjectExplorerWindow::Rebuild()
 
     if (m_project != NULL)
     {
+        for (unsigned int i = 0; i < m_project->GetNumDirectories(); ++i)
+        {
+           RebuildForDirectory(m_project->GetDirectory(i));
+        }
+
         for (unsigned int i = 0; i < m_project->GetNumFiles(); ++i)
         {
-            RebuildForFile(m_project->GetFile(i));
+            RebuildForFile(m_root, m_project->GetFile(i));
         }
     }
 
-    m_tree->SortChildren(m_tree->GetRootItem());
+    SortTree(m_tree->GetRootItem());
 
     // For whatever reason the unselect event isn't reported properly
     // after deleting all items, so explicitly clear out the info box.
@@ -230,7 +283,23 @@ void ProjectExplorerWindow::Rebuild()
 
 }
 
-void ProjectExplorerWindow::RebuildForFile(Project::File* file)
+void ProjectExplorerWindow::RebuildForDirectory(Project::Directory *directory)
+{
+  ItemData* data = new ItemData;
+  data->file = directory;
+  data->symbol = NULL;
+  data->isFile = false;
+
+  wxTreeItemId node = m_tree->AppendItem(m_root, directory->name, 8, 8, data);
+  m_tree->SetItemTextColour(node, m_itemColor);
+
+  for (Project::File *file : directory->files)
+  {
+    RebuildForFile(node, file);
+  }
+}
+
+void ProjectExplorerWindow::RebuildForFile(wxTreeItemId node, Project::File* file)
 {
 
     // Check if the file passes our filter flags.
@@ -262,7 +331,7 @@ void ProjectExplorerWindow::RebuildForFile(Project::File* file)
         if (m_filter.IsEmpty())
         {
             // Just include the files like the standard Visual Studio project view.
-            AddFile(m_root, file);
+            AddFile(node, file);
         }
         else
         {
@@ -270,9 +339,9 @@ void ProjectExplorerWindow::RebuildForFile(Project::File* file)
             // Filter all of the symbols, modules and file name.
                 
             // Check to see if the file name matches the filter.
-            if (MatchesFilter(file->fileName.GetFullName(), m_filter))
+          if (MatchesFilter(file->fileName.GetFullName(), m_filter) || MatchesFilter(file->localPath, m_filter))
             {
-                AddFile(m_root, file);
+                AddFile(node, file);
             }
 
             for (unsigned int j = 0; j < file->symbols.size(); ++j)
@@ -283,7 +352,7 @@ void ProjectExplorerWindow::RebuildForFile(Project::File* file)
                 // Check to see if the symbol matches the filter.
                 if (MatchesFilter(symbol->name, m_filter))
                 {
-                    AddSymbol(m_root, file, symbol);
+                    AddSymbol(node, file, symbol);
                 }
 
             }
@@ -324,15 +393,58 @@ bool ProjectExplorerWindow::MatchesFilter(const wxString& string, const wxString
 
 void ProjectExplorerWindow::AddFile(wxTreeItemId parent, Project::File* file)
 {
-
     ItemData* data = new ItemData;
     data->file      = file;
     data->symbol    = NULL;
+    data->isFile    = true;
 
     int image = GetImageForFile(file);
+    wxTreeItemIdValue cookie;
 
-    wxTreeItemId fileNode = m_tree->AppendItem(parent, file->GetDisplayName(), image, image, data);
+    bool found = false;
+    wxString path = file->localPath;
+    wxString directory = path.BeforeFirst('\\');
+    wxTreeItemId node;
+    wxTreeItemId parentNode = parent;
 
+    if (directory.IsEmpty())
+      node = parent;
+    else
+    {
+      while (!directory.IsEmpty())
+      {
+        found = false;
+
+        //Add needed directories for file
+        node = m_tree->GetFirstChild(parentNode, cookie);
+        while (node.IsOk())
+        {
+          if (m_tree->GetItemText(node) == directory)
+          {
+            found = true;
+            break;
+          }
+
+          node = m_tree->GetNextChild(parentNode, cookie);
+        }
+
+        if (!found)
+        {
+          node = m_tree->AppendItem(parentNode, directory, 8, 8, nullptr);
+          m_tree->SetItemTextColour(node, m_itemColor);
+        }
+
+        path.Remove(0, directory.size() + 1);
+
+        directory = path.BeforeFirst('\\');
+
+        parentNode = node;
+      }
+
+    }
+
+    wxTreeItemId fileNode = m_tree->AppendItem(node, file->GetDisplayName(), image, image, data);
+    m_tree->SetItemTextColour(fileNode, m_itemColor);
     // Add the symbols.
 
     stdext::hash_map<std::string, wxTreeItemId> groups;
@@ -351,6 +463,7 @@ void ProjectExplorerWindow::AddFile(wxTreeItemId parent, Project::File* file)
             if (iterator == groups.end())
             {
                 node = m_tree->AppendItem(fileNode, file->symbols[i]->module, Image_Module, Image_Module);
+                m_tree->SetItemTextColour(node, m_itemColor);
                 groups.insert(std::make_pair(file->symbols[i]->module.ToAscii(), node));
             }
             else
@@ -372,6 +485,7 @@ void ProjectExplorerWindow::AddSymbol(wxTreeItemId parent, Project::File* file, 
     ItemData* data = new ItemData;
     data->file      = file;
     data->symbol    = symbol;
+    data->isFile    = true;
 
     wxString fullName = symbol->name + " ()";
 
@@ -380,8 +494,8 @@ void ProjectExplorerWindow::AddSymbol(wxTreeItemId parent, Project::File* file, 
         fullName += " - " + symbol->module;
     }
 
-    m_tree->AppendItem(parent, fullName, Image_Function, Image_Function, data);
-
+    wxTreeItemId node = m_tree->AppendItem(parent, fullName, Image_Function, Image_Function, data);
+    m_tree->SetItemTextColour(node, m_itemColor);
 }
 
 void ProjectExplorerWindow::OnTreeItemExpanding(wxTreeEvent& event)
@@ -429,8 +543,17 @@ void ProjectExplorerWindow::OnTreeItemContextMenu(wxTreeEvent& event)
         if (itemData != NULL && itemData->file != NULL && itemData->symbol == NULL)
         {
             wxTreeEvent copy(event);
+            copy.SetInt(0);
             copy.SetEventType(wxEVT_TREE_CONTEXT_MENU);
             AddPendingEvent(copy);
+        }
+        //Is a basic directory
+        else if (itemData == NULL)
+        {
+          wxTreeEvent copy(event);
+          copy.SetInt(1);
+          copy.SetEventType(wxEVT_TREE_CONTEXT_MENU);
+          AddPendingEvent(copy);
         }
 
     }
@@ -459,9 +582,9 @@ void ProjectExplorerWindow::OnTreeItemSelectionChanged(wxTreeEvent& event)
         m_tree->SelectItem(item);
         ItemData* itemData = GetDataForItem(item);
 
-        if (itemData != NULL && itemData->file != NULL)
+        if (itemData != NULL && itemData->file != NULL && itemData->isFile)
         {
-            file = itemData->file;
+            file = (Project::File *)itemData->file;
         }
 
     }
@@ -476,7 +599,6 @@ void ProjectExplorerWindow::OnTreeItemSelectionChanged(wxTreeEvent& event)
 
 void ProjectExplorerWindow::GetSelectedFiles(std::vector<Project::File*>& selectedFiles) const
 {
-
     wxArrayTreeItemIds selectedIds;
     m_tree->GetSelections(selectedIds);
 
@@ -486,18 +608,59 @@ void ProjectExplorerWindow::GetSelectedFiles(std::vector<Project::File*>& select
         ItemData* itemData = GetDataForItem(selectedIds[i]);
 
         // Only add the selected item if it's a file.
-        if (itemData != NULL && itemData->file != NULL && itemData->symbol == NULL)
+        if (itemData != NULL && itemData->file != NULL && itemData->symbol == NULL && itemData->isFile)
         {
-            selectedFiles.push_back(itemData->file);
+            selectedFiles.push_back((Project::File *)itemData->file);
         }
 
     }
 }
 
+void ProjectExplorerWindow::GetSelectedDirectories(std::vector<Project::Directory*>& selectedDirectories) const
+{
+  wxArrayTreeItemIds selectedIds;
+  m_tree->GetSelections(selectedIds);
+
+  for (unsigned int i = 0; i < selectedIds.Count(); ++i)
+  {
+
+    ItemData* itemData = GetDataForItem(selectedIds[i]);
+
+    // Only add the selected item if it's a file.
+    if (itemData != NULL && itemData->file != NULL && itemData->isFile == false)
+    {
+      selectedDirectories.push_back((Project::Directory *)itemData->file);
+    }
+
+  }
+  
+}
+
+void ProjectExplorerWindow::InsertDirectory(Project::Directory* directory)
+{
+  RebuildForDirectory(directory);
+  SortTree(m_tree->GetRootItem());
+}
+
+void ProjectExplorerWindow::RemoveDirectory(Project::Directory* directory)
+{
+  for (Project::File *file : directory->files)
+  {
+    RemoveFileSymbols(m_tree->GetRootItem(), file);
+
+    if (m_infoBox->GetFile() == file)
+    {
+      m_infoBox->SetFile(NULL);
+    }
+  }
+
+  RemoveFileSymbols(m_tree->GetRootItem(), (Project::File *)directory);
+}
+
 void ProjectExplorerWindow::InsertFile(Project::File* file)
 {
-    RebuildForFile(file);
-    m_tree->SortChildren(m_tree->GetRootItem());
+    RebuildForFile(m_root, file);
+    SortTree(m_tree->GetRootItem());
 }
 
 void ProjectExplorerWindow::RemoveFile(Project::File* file)
@@ -559,7 +722,7 @@ void ProjectExplorerWindow::RemoveFileSymbols(wxTreeItemId node, const stdext::h
 
     ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(node));
 
-    if (data != NULL && fileSet.find(data->file) != fileSet.end())
+    if (data != NULL && data->isFile && fileSet.find((Project::File *)data->file) != fileSet.end())
     {
         m_tree->Delete(node);
     }
@@ -585,6 +748,11 @@ void ProjectExplorerWindow::RemoveFileSymbols(wxTreeItemId node, const stdext::h
 void ProjectExplorerWindow::SetFileContextMenu(wxMenu* contextMenu)
 {
     m_contextMenu = contextMenu;
+}
+
+void ProjectExplorerWindow::SetDirectoryContextMenu(wxMenu* contextMenu)
+{
+    m_directoryContextMenu = contextMenu;
 }
 
 int ProjectExplorerWindow::GetImageForFile(const Project::File* file) const
@@ -633,9 +801,9 @@ void ProjectExplorerWindow::UpdateFileImages()
 
         ItemData* data = GetDataForItem(item);
         
-        if (data != NULL && data->file != NULL && data->symbol == NULL)
+        if (data != NULL && data->file != NULL && data->symbol == NULL && data->isFile)
         {
-            int image = GetImageForFile(data->file);
+            int image = GetImageForFile((Project::File *)data->file);
             m_tree->SetItemImage(item, image);
             m_tree->SetItemImage(item, image, wxTreeItemIcon_Selected);
         }
@@ -650,7 +818,10 @@ void ProjectExplorerWindow::UpdateFileImages()
 
 void ProjectExplorerWindow::OnMenu(wxTreeEvent& event)
 {
+  if (event.GetInt() == 0)
     m_tree->PopupMenu(m_contextMenu, event.GetPoint());
+  else if (event.GetInt() == 1)
+    m_tree->PopupMenu(m_directoryContextMenu, event.GetPoint());
 }
 
 void ProjectExplorerWindow::OnFilterButton(wxCommandEvent& event)
@@ -674,16 +845,61 @@ void ProjectExplorerWindow::OnFilterButton(wxCommandEvent& event)
 
 void ProjectExplorerWindow::UpdateFile(Project::File* file)
 {
-
     m_tree->Freeze();
 
-    RemoveFileSymbols(m_tree->GetRootItem(), file);
-    RebuildForFile(file);
+    wxArrayTreeItemIds selectedItems;
+    m_tree->GetSelections(selectedItems);
 
-    m_tree->SortChildren(m_tree->GetRootItem());
+    wxTreeItemId fileNode = FindFile(m_tree->GetRootItem(), file);
+    bool isSelected = m_tree->IsSelected(fileNode);
+    if (isSelected)
+      m_tree->UnselectItem(fileNode);
+
+    RemoveFileSymbols(m_tree->GetRootItem(), file);
+
+    //If only one item is selected, need to remove it later
+    if (isSelected && selectedItems.size() == 1)
+    {
+      selectedItems.clear();
+      m_tree->GetSelections(selectedItems);
+      //fileNode = m_tree->UnselectItem
+    }
+
+    wxTreeItemId node = m_root;
+    if (file->directoryPath.IsEmpty() == false)
+    {
+      wxStack stack;
+
+      wxTreeItemIdValue cookie;
+      wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+      wxString target = file->directoryPath;
+      
+      while (temp.IsOk())
+      {
+        if (m_tree->GetItemText(temp) == target)
+          break;
+
+        temp = m_tree->GetNextChild(temp, cookie);
+      }
+
+      if (temp.IsOk() == false)
+        temp = m_root;
+
+      node = temp;
+    }
+
+    RebuildForFile(node, file);
+    SortTree(m_tree->GetRootItem());
+    if (isSelected)
+    {
+      m_tree->SelectItem(FindFile(m_tree->GetRootItem(), file));
+
+      //Deselect the other node
+      if (selectedItems.size() == 1)
+        m_tree->SelectItem(selectedItems[0], false);
+    }
 
     m_tree->Thaw();
-
 }
 
 void ProjectExplorerWindow::SetFilterFlags(unsigned int filterFlags)
@@ -754,4 +970,195 @@ void ProjectExplorerWindow::UpdateFilterButtonImage()
 
     m_filterButton->SetBitmapLabel(bitmap);
     
+}
+
+void ProjectExplorerWindow::SortTree(wxTreeItemId node)
+{
+  m_tree->SortChildren(node);
+
+  //Sort all childen recursively
+  wxTreeItemIdValue cookie;
+  wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+  while (temp.IsOk())
+  {
+    if (m_tree->HasChildren(temp))
+    {
+      SortTree(temp);
+    }
+
+    temp = m_tree->GetNextChild(temp, cookie);
+  }
+}
+
+#include <iostream>
+#include <sstream>
+
+#define DBOUT( s )            \
+{                             \
+   std::wostringstream os_;    \
+   os_ << s;                   \
+   OutputDebugStringW( os_.str().c_str() );  \
+}
+
+
+wxTreeItemId ProjectExplorerWindow::FindFile(wxTreeItemId node, Project::File *file)
+{
+  ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(node));
+  if (data && data->isFile && data->file == file)
+  {
+    return node;
+  }
+
+  //Sort all childen recursively
+  wxTreeItemIdValue cookie;
+  wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+  while (temp.IsOk())
+  {
+    wxTreeItemId node = FindFile(temp, file);
+    if (node.IsOk())
+      return node;
+
+    temp = m_tree->GetNextChild(temp, cookie);
+  }
+
+  return wxTreeItemId();
+}
+
+void ProjectExplorerWindow::TraverseTree(wxTreeItemId node, std::function<void(wxTreeItemId const &)> function) const
+{
+  //Go through all children in depth first order.
+  wxTreeItemIdValue cookie;
+  wxTreeItemId temp = m_tree->GetFirstChild(node, cookie);
+  while (temp.IsOk())
+  {
+    TraverseTree(temp, function);
+    function(temp);
+
+    temp = m_tree->GetNextChild(temp, cookie);
+  }
+}
+
+
+void ProjectExplorerWindow::SaveExpansion()
+{
+  m_expandedIds.clear();
+
+  //Save all nodes that are expanded
+  TraverseTree(m_root, [&, this](wxTreeItemId const &item)
+  {
+    wxTreeItemId node = m_tree->GetItemParent(item);
+    ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
+
+    //If the file has a parent and it is expanded, add it to the list
+    if (node != m_root && node.IsOk() && data && data->isFile && m_tree->IsExpanded(node))
+    {
+      m_expandedIds.push_back(data->file);
+    }
+  });
+}
+
+void ProjectExplorerWindow::LoadExpansion()
+{
+  //Only expand the previously expanded items.
+  TraverseTree(m_root, [&, this](wxTreeItemId const &item)
+  {
+    ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(item));
+    for (void* expand_file : m_expandedIds)
+    {
+      if (data && data->file == expand_file)
+      {
+        wxStack treeStack;
+
+        //Collect all parent nodes
+        wxTreeItemId node = m_tree->GetItemParent(item);
+        while (node.IsOk())
+        {
+          if (node != m_root)
+            treeStack.push(node);
+
+          node = m_tree->GetItemParent(node);
+        }
+
+        //Expand them in reverse order
+        while (treeStack.size() > 0)
+        {
+          node = treeStack.top();
+          treeStack.pop();
+
+          m_tree->Expand(node);
+        }
+
+        m_tree->Collapse(item);
+      }
+    }
+  });
+}
+
+wxString ProjectExplorerWindow::GetSelectedDirectoryName()
+{
+  wxArrayTreeItemIds array;
+  m_tree->GetSelections(array);
+
+  if (array.size() != 1)
+    return wxString();
+
+  wxTreeItemId selection = array[0];
+
+  if (selection.IsOk())
+  {
+    ItemData* itemData = GetDataForItem(selection);
+
+    if (itemData == NULL)
+    {
+      wxStack treeStack;
+
+      treeStack.push(selection);
+
+      //Collect all parent nodes
+      wxTreeItemId node = m_tree->GetItemParent(selection);
+      while (node.IsOk())
+      {
+        if (node != m_root)
+          treeStack.push(node);
+
+        node = m_tree->GetItemParent(node);
+      }
+
+      wxString directory;
+      
+      //Expand them in reverse order
+      while (treeStack.size() > 0)
+      {
+        node = treeStack.top();
+        treeStack.pop();
+
+        directory += m_tree->GetItemText(node) + '\\';
+      }
+
+      return directory;
+    }
+  }
+
+  return wxString();
+}
+
+
+IMPLEMENT_DYNAMIC_CLASS(wxProjectTree, wxTreeCtrl);
+int wxProjectTree::OnCompareItems(const wxTreeItemId &item1, const wxTreeItemId &item2)
+{
+  ProjectExplorerWindow::ItemData* data1 = static_cast<ProjectExplorerWindow::ItemData*>(GetItemData(item1));
+  ProjectExplorerWindow::ItemData* data2 = static_cast<ProjectExplorerWindow::ItemData*>(GetItemData(item2));
+
+  //if (data1 && data2)
+  //{
+  if (data1 && data2)
+    return GetItemText(item1).Cmp(GetItemText(item2));
+  else if (data1 || data2)
+  {
+    if (data1) return 1;
+    else return -1;
+  }
+  //}
+
+  return GetItemText(item1).Cmp(GetItemText(item2));
 }

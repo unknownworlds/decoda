@@ -227,7 +227,7 @@ void DebugBackend::Log(const char* fmt, ...)
         if (GetStartupDirectory(fileName, _MAX_PATH))
         {
             strcat(fileName, "log.txt");
-            m_log = fopen("c:/temp/log.txt", "wt");
+            m_log = fopen("log.txt", "wt");
         }
     }
 
@@ -697,7 +697,10 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 {
 
     m_criticalSection.Enter(); 
-   
+    
+    // Log for debugging.
+    //LogHookEvent(api, L, ar);
+
     if (!lua_checkstack_dll(api, L, 2))
     {
         m_criticalSection.Exit();
@@ -779,9 +782,6 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 
     lua_pop_dll(api, L, 1);
 
-    // Log for debugging.
-    //LogHookEvent(api, L, ar);
-
     //Only try to downgrade the hook when the debugger is not stepping   
     if(m_mode == Mode_Continue)
     {
@@ -862,15 +862,14 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
         if (stop)
         {
             BreakFromScript(api, L);
-            
-            if(vm->luaJitWorkAround)
-            {
-                vm->callStackDepth = GetStackDepth(api, L);
-                vm->lastStepLine = GetCurrentLine(api, ar);
-                vm->lastStepScript = scriptIndex;
-            }
         }
-
+        
+        if (vm->luaJitWorkAround)
+        {
+          vm->callStackDepth = GetStackDepth(api, L);
+          vm->lastStepLine = GetCurrentLine(api, ar);
+          vm->lastStepScript = scriptIndex;
+        }
     }
     else
     {
@@ -2135,10 +2134,8 @@ bool DebugBackend::CallMetaMethod(unsigned long api, lua_State* L, int valueInde
 
         if (!lua_isnil_dll(api, L, metaTableIndex))
         {
-
             lua_pushstring_dll(api, L, method);
-            lua_gettable_dll(api, L, metaTableIndex);
-
+            lua_rawget_dll(api, L, metaTableIndex);
             if (lua_isnil_dll(api, L, -1))
             {
                 // The meta-method doesn't exist.
@@ -2148,6 +2145,7 @@ bool DebugBackend::CallMetaMethod(unsigned long api, lua_State* L, int valueInde
             }
             else
             {
+                lua_gettop_dll(api, L);
                 lua_pushvalue_dll(api, L, valueIndex);
                 result = lua_pcall_dll(api, L, 1, numResults, 0);
             }

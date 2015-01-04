@@ -26,6 +26,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <wx/wx.h>
 
 #include "ListView.h"
+#include "FontColorSettings.h"
 
 //
 // Forward declarations.
@@ -51,6 +52,11 @@ public:
      * Constructor.
      */
     ListWindow(MainFrame* mainFrame, wxWindowID winid);
+
+    /**
+    * Updates the colors of the panel to match the settings
+    */
+    void SetFontColorSettings(const FontColorSettings& settings);
 
     /**
      * Adds an item to the list.
