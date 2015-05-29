@@ -1751,9 +1751,12 @@ int DebugBackend::IndexChained(unsigned long api, lua_State* L)
     // If it wasn't found, get from the global table.
     if (lua_isnil_dll(api, L, -1))
     {
-        lua_pop_dll(api, L, 1);
+        lua_pop_dll( api, L, 1 );
+        lua_pushglobaltable_dll( api, L );
         lua_pushvalue_dll(api, L, key);
-        lua_gettable_dll(api, L, table[2]);
+        lua_gettable_dll(api, L, -2);
+        lua_remove_dll(api, L, -2);
+
     }
 
     // If the value is our nil sentinel, convert it to an actual nil.
