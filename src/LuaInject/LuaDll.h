@@ -39,6 +39,7 @@ int             lua_absindex_dll        (unsigned long api, lua_State*, int);
 int             lua_sethook_dll         (unsigned long api, lua_State*, lua_Hook, int, int);
 int             lua_getinfo_dll         (unsigned long api, lua_State*, const char*, lua_Debug* ar);
 void            lua_remove_dll          (unsigned long api, lua_State*, int);
+void            lua_rotate_dll          (unsigned long api, lua_State*, int, int);
 void            lua_settable_dll        (unsigned long api, lua_State*, int);
 void            lua_gettable_dll        (unsigned long api, lua_State*, int);
 void            lua_rawget_dll          (unsigned long api, lua_State*, int idx);

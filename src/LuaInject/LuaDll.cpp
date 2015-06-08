@@ -61,7 +61,8 @@ typedef int             (*lua_absindex_cdecl_t)         (lua_State*, int);
 typedef int             (*lua_sethook_cdecl_t)          (lua_State*, lua_Hook, int, int);
 typedef int             (*lua_gethookmask_cdecl_t)      (lua_State*);
 typedef int             (*lua_getinfo_cdecl_t)          (lua_State*, const char*, lua_Debug* ar);
-typedef void            (*lua_remove_cdecl_t)           (lua_State*, int);
+typedef void            (*lua_remove_cdecl_t )          (lua_State*, int);
+typedef void            (*lua_rotate_cdecl_t )          (lua_State*, int, int);
 typedef void            (*lua_settable_cdecl_t)         (lua_State*, int);
 typedef void            (*lua_gettable_cdecl_t)         (lua_State*, int);
 typedef void            (*lua_setglobal_cdecl_t)        (lua_State*, const char*);
@@ -133,8 +134,9 @@ typedef int             (__stdcall *lua_error_stdcall_t)          (lua_State*);
 typedef int             (__stdcall *lua_absindex_stdcall_t)       (lua_State*, int);
 typedef int             (__stdcall *lua_sethook_stdcall_t)        (lua_State*, lua_Hook_stdcall, int, int);
 typedef int             (__stdcall *lua_gethookmaskstdcall_t)     (lua_State*);
-typedef int             (__stdcall *lua_getinfo_stdcall_t)        (lua_State*, const char*, lua_Debug* ar);
+typedef int             (__stdcall *lua_getinfo_stdcall_t)        (lua_State*, const char*, lua_Debug*);
 typedef void            (__stdcall *lua_remove_stdcall_t)         (lua_State*, int);
+typedef void            (__stdcall *lua_rotate_stdcall_t)         (lua_State*, int, int);
 typedef void            (__stdcall *lua_settable_stdcall_t)       (lua_State*, int);
 typedef void            (__stdcall *lua_gettable_stdcall_t)       (lua_State*, int);
 typedef void            (__stdcall *lua_setglobal_stdcall_t)      (lua_State*, const char*);
@@ -208,7 +210,7 @@ typedef LONG            (WINAPI *LdrUnlockLoaderLock_t)         (ULONG flags, UL
 struct LuaInterface
 {
 
-    int                          version;   // One of 401, 500, 510, 520
+    int                          version;   // One of 401, 500, 510, 520, 530
     bool                         finishedLoading;
 
     bool                         stdcall;
@@ -227,12 +229,13 @@ struct LuaInterface
     lua_close_cdecl_t            lua_close_dll_cdecl;
     lua_newthread_cdecl_t        lua_newthread_dll_cdecl;
     lua_error_cdecl_t            lua_error_dll_cdecl;
-		lua_absindex_cdecl_t         lua_absindex_dll_cdecl;
+	lua_absindex_cdecl_t         lua_absindex_dll_cdecl;
     lua_gettop_cdecl_t           lua_gettop_dll_cdecl;
     lua_sethook_cdecl_t          lua_sethook_dll_cdecl;
     lua_gethookmask_cdecl_t      lua_gethookmask_dll_cdecl;
     lua_getinfo_cdecl_t          lua_getinfo_dll_cdecl;
     lua_remove_cdecl_t           lua_remove_dll_cdecl;
+    lua_rotate_cdecl_t           lua_rotate_dll_cdecl;
     lua_settable_cdecl_t         lua_settable_dll_cdecl;
     lua_gettable_cdecl_t         lua_gettable_dll_cdecl;
     lua_setglobal_cdecl_t        lua_setglobal_dll_cdecl;
@@ -307,6 +310,7 @@ struct LuaInterface
     lua_gethookmaskstdcall_t     lua_gethookmask_dll_stdcall;
     lua_getinfo_stdcall_t        lua_getinfo_dll_stdcall;
     lua_remove_stdcall_t         lua_remove_dll_stdcall;
+    lua_rotate_stdcall_t         lua_rotate_dll_stdcall;
     lua_settable_stdcall_t       lua_settable_dll_stdcall;
     lua_gettable_stdcall_t       lua_gettable_dll_stdcall;
     lua_setglobal_stdcall_t      lua_setglobal_dll_stdcall;
@@ -683,6 +687,7 @@ int GetEvent(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.event;
         default: return ar->ld51.event;
     }
@@ -692,6 +697,7 @@ int GetNups(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.nups;
         default: return ar->ld51.nups;
     }
@@ -701,6 +707,7 @@ int GetCurrentLine(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.currentline;
         default: return ar->ld51.currentline;
     }
@@ -710,6 +717,7 @@ int GetLineDefined(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.linedefined;
         default: return ar->ld51.linedefined;
     }
@@ -719,6 +727,7 @@ int GetLastLineDefined(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.lastlinedefined;
         default: return ar->ld51.lastlinedefined;
     }
@@ -728,6 +737,7 @@ const char* GetSource(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.source;
         default: return ar->ld51.source;
     }
@@ -746,6 +756,7 @@ const char* GetName(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.name;
         default: return ar->ld51.name;
     }
@@ -962,7 +973,7 @@ int GetRegistryIndex(unsigned long api)
 int lua_absindex_dll(unsigned long api, lua_State* L, int i)
 {
     if (g_interfaces[api].lua_absindex_dll_cdecl != NULL)
-{
+    {
         return g_interfaces[api].lua_absindex_dll_cdecl(L, i);
     }
     else if (g_interfaces[api].lua_absindex_dll_stdcall != NULL)
@@ -983,14 +994,14 @@ int lua_absindex_dll(unsigned long api, lua_State* L, int i)
 
 int lua_upvalueindex_dll(unsigned long api, int i)
 {
-   if( g_interfaces[api].version >= 520)
+    if( g_interfaces[api].version >= 520)
     {
         return GetRegistryIndex(api) - i;
     }
     else 
     {
-    return GetGlobalsIndex(api) - i;
-}
+        return GetGlobalsIndex( api ) - i;
+    }
 }
 
 void lua_setglobal_dll(unsigned long api, lua_State* L, const char* s)
@@ -1132,13 +1143,33 @@ int lua_getinfo_dll(unsigned long api, lua_State* L, const char* what, lua_Debug
 
 void lua_remove_dll(unsigned long api, lua_State* L, int index)
 {
-    if (g_interfaces[api].lua_remove_dll_cdecl != NULL)
+    if ( g_interfaces[ api ].version >= 530 )
     {
-        g_interfaces[api].lua_remove_dll_cdecl(L, index);
+        lua_rotate_dll( api, L, index, -1 );
+        lua_pop_dll( api, L, 1 );
     }
     else
     {
-        g_interfaces[api].lua_remove_dll_stdcall(L, index);
+        if ( g_interfaces[ api ].lua_remove_dll_cdecl != NULL )
+        {
+            g_interfaces[ api ].lua_remove_dll_cdecl(L, index);
+        }
+        else
+        {
+            g_interfaces[ api ].lua_remove_dll_stdcall(L, index);
+        }
+    }
+}
+
+void lua_rotate_dll(unsigned long api, lua_State* L, int index, int n )
+{
+    if (g_interfaces[api].lua_rotate_dll_cdecl != NULL)
+    {
+        g_interfaces[api].lua_rotate_dll_cdecl(L, index, n);
+    }
+    else
+    {
+        g_interfaces[api].lua_rotate_dll_stdcall(L, index, n);
     }
 }
 
@@ -1339,13 +1370,20 @@ int lua_getstack_dll(unsigned long api, lua_State* L, int level, lua_Debug* ar)
 
 void lua_insert_dll(unsigned long api, lua_State* L, int index)
 {
-    if (g_interfaces[api].lua_insert_dll_cdecl != NULL)
+    if (g_interfaces[ api ].version >= 53)
     {
-        g_interfaces[api].lua_insert_dll_cdecl(L, index);
+        lua_rotate_dll(api, L, index, 1 );
     }
     else
     {
-        g_interfaces[api].lua_insert_dll_stdcall(L, index);
+        if (g_interfaces[ api ].lua_insert_dll_cdecl != NULL)
+        {
+            g_interfaces[ api ].lua_insert_dll_cdecl(L, index);
+        }
+        else
+        {
+            g_interfaces[ api ].lua_insert_dll_stdcall(L, index);
+        }
     }
 }
 
@@ -2069,6 +2107,7 @@ void FinishLoadingLua(unsigned long api, bool stdcall)
         SET_STDCALL(lua_sethook);
         SET_STDCALL(lua_getinfo);
         SET_STDCALL(lua_remove);
+        SET_STDCALL(lua_rotate);
         SET_STDCALL(lua_settable);
         SET_STDCALL(lua_gettable);
         SET_STDCALL(lua_setglobal);
@@ -3213,6 +3252,15 @@ bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HAN
             luaInterface.registryIndex  = -10000;
             luaInterface.globalsIndex   = -10001;
         }
+        else if (symbols.find( "lua_rotate" ) != symbols.end())
+        {
+            luaInterface.version = 530;
+            // LUA_REGISTRYINDEX == LUAI_FIRSTPSEUDOIDX with LUAI_FIRSTPSEUDOIDX == (-LUAI_MAXSTACK - 1000) with LUAI_MAXSTACK == 15000 (for 32 bits build...)
+            luaInterface.registryIndex = -1001000;
+            // starting with Lua 5.2, there is no longer a LUA_GLOBALSINDEX pseudo-index. Instead the global table is stored in the registry at LUA_RIDX_GLOBALS
+            luaInterface.globalsIndex = 2;
+            luaInterface.hookTailCall = LUA_HOOKTAILCALL; // Lua5.2 has LUA_HOOKTAILCALL, but no LUA_HOOKTAILRET
+        }
         else if (symbols.find("lua_callk") != symbols.end())
         {
             luaInterface.version        = 520;
@@ -3251,7 +3299,8 @@ bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HAN
     GET_FUNCTION_OPTIONAL(lua_absindex); // Only present in Lua 5.2+
     GET_FUNCTION(lua_sethook);
     GET_FUNCTION(lua_getinfo);
-    GET_FUNCTION(lua_remove);
+    GET_FUNCTION_OPTIONAL(lua_remove); // Only present up to Lua 5.3
+    GET_FUNCTION_OPTIONAL(lua_rotate); // Only present in Lua 5.3
     GET_FUNCTION(lua_settable);
     GET_FUNCTION(lua_gettable);
     GET_FUNCTION(lua_rawget);
@@ -3266,7 +3315,7 @@ bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HAN
     GET_FUNCTION(lua_getlocal);
     GET_FUNCTION(lua_setlocal);
     GET_FUNCTION(lua_getstack);
-    GET_FUNCTION(lua_insert);
+    GET_FUNCTION_OPTIONAL(lua_insert); // Only present in Lua < 5.3
     GET_FUNCTION(lua_pushnil);
     GET_FUNCTION(lua_pushvalue);
     GET_FUNCTION(lua_pushcclosure);
