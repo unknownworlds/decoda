@@ -210,7 +210,7 @@ typedef LONG            (WINAPI *LdrUnlockLoaderLock_t)         (ULONG flags, UL
 struct LuaInterface
 {
 
-    int                          version;   // One of 401, 500, 510, 520
+    int                          version;   // One of 401, 500, 510, 520, 530
     bool                         finishedLoading;
 
     bool                         stdcall;
@@ -687,6 +687,7 @@ int GetEvent(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.event;
         default: return ar->ld51.event;
     }
@@ -696,6 +697,7 @@ int GetNups(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.nups;
         default: return ar->ld51.nups;
     }
@@ -705,6 +707,7 @@ int GetCurrentLine(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.currentline;
         default: return ar->ld51.currentline;
     }
@@ -714,6 +717,7 @@ int GetLineDefined(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.linedefined;
         default: return ar->ld51.linedefined;
     }
@@ -723,6 +727,7 @@ int GetLastLineDefined(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.lastlinedefined;
         default: return ar->ld51.lastlinedefined;
     }
@@ -732,6 +737,7 @@ const char* GetSource(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.source;
         default: return ar->ld51.source;
     }
@@ -750,6 +756,7 @@ const char* GetName(unsigned long api, const lua_Debug* ar)
 {
     switch( g_interfaces[api].version)
     {
+        case 530:
         case 520: return ar->ld52.name;
         default: return ar->ld51.name;
     }
@@ -966,7 +973,7 @@ int GetRegistryIndex(unsigned long api)
 int lua_absindex_dll(unsigned long api, lua_State* L, int i)
 {
     if (g_interfaces[api].lua_absindex_dll_cdecl != NULL)
-{
+    {
         return g_interfaces[api].lua_absindex_dll_cdecl(L, i);
     }
     else if (g_interfaces[api].lua_absindex_dll_stdcall != NULL)
@@ -987,14 +994,14 @@ int lua_absindex_dll(unsigned long api, lua_State* L, int i)
 
 int lua_upvalueindex_dll(unsigned long api, int i)
 {
-   if( g_interfaces[api].version >= 520)
+    if( g_interfaces[api].version >= 520)
     {
         return GetRegistryIndex(api) - i;
     }
     else 
     {
-    return GetGlobalsIndex(api) - i;
-}
+        return GetGlobalsIndex( api ) - i;
+    }
 }
 
 void lua_setglobal_dll(unsigned long api, lua_State* L, const char* s)
