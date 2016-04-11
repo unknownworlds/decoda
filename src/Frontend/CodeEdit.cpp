@@ -20,6 +20,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#include <algorithm>
 #include "CodeEdit.h"
 #include "FontColorSettings.h"
 #include "EditorSettings.h"

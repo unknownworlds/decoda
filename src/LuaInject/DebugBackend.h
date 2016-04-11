@@ -31,8 +31,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <string>
 #include <list>
-#include <hash_set>
-#include <hash_map>
+#include <unordered_set>
+#include <unordered_map>
 
 //
 // Forward declarations.
@@ -579,9 +579,9 @@ private:
 
 private:
 
-    typedef stdext::hash_map<lua_State*, VirtualMachine*>   StateToVmMap;
-    typedef stdext::hash_map<std::string, unsigned int>     NameToScriptMap;
-    typedef stdext::hash_map<lua_State*, lua_State*>        StateParentMap;
+    typedef std::unordered_map<lua_State*, VirtualMachine*>   StateToVmMap;
+    typedef std::unordered_map<std::string, unsigned int>     NameToScriptMap;
+    typedef std::unordered_map<lua_State*, lua_State*>        StateParentMap;
 
     static DebugBackend*            s_instance;
     static const unsigned int       s_maxStackSize  = 200;
@@ -613,7 +613,7 @@ private:
     lua_State*                      m_currentThread;
     
     mutable CriticalSection         m_exceptionCriticalSection; // Controls access to ignoreExceptions 
-    stdext::hash_set<std::string>   m_ignoreExceptions;
+    std::unordered_set<std::string>   m_ignoreExceptions;
 
     std::vector<Api>                m_apis;
 

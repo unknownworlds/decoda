@@ -31,7 +31,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <wx/file.h>
 #include <wx/listctrl.h>
-#include <hash_map>
+#include <unordered_map>
 
 #include "res/explorer.xpm"
 #include "res/filter_bitmap.xpm"
@@ -335,7 +335,7 @@ void ProjectExplorerWindow::AddFile(wxTreeItemId parent, Project::File* file)
 
     // Add the symbols.
 
-    stdext::hash_map<std::string, wxTreeItemId> groups;
+    std::unordered_map<std::string, wxTreeItemId> groups;
 
     for (unsigned int i = 0; i < file->symbols.size(); ++i)
     {
@@ -345,7 +345,7 @@ void ProjectExplorerWindow::AddFile(wxTreeItemId parent, Project::File* file)
         if (!file->symbols[i]->module.IsEmpty())
         {
 
-            stdext::hash_map<std::string, wxTreeItemId>::const_iterator iterator;
+            std::unordered_map<std::string, wxTreeItemId>::const_iterator iterator;
             iterator = groups.find(file->symbols[i]->module.ToAscii());
 
             if (iterator == groups.end())
@@ -515,7 +515,7 @@ void ProjectExplorerWindow::RemoveFile(Project::File* file)
 void ProjectExplorerWindow::RemoveFiles(const std::vector<Project::File*>& files)
 {
 
-    stdext::hash_set<Project::File*> fileSet;
+    std::unordered_set<Project::File*> fileSet;
 
     for (unsigned int i = 0; i < files.size(); ++i)
     {
@@ -554,7 +554,7 @@ void ProjectExplorerWindow::RemoveFileSymbols(wxTreeItemId node, Project::File* 
     
 }
 
-void ProjectExplorerWindow::RemoveFileSymbols(wxTreeItemId node, const stdext::hash_set<Project::File*>& fileSet)
+void ProjectExplorerWindow::RemoveFileSymbols(wxTreeItemId node, const std::unordered_set<Project::File*>& fileSet)
 {
 
     ItemData* data = static_cast<ItemData*>(m_tree->GetItemData(node));

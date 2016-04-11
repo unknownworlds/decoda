@@ -35,8 +35,8 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <malloc.h>
 #include <assert.h>
 #include <set>
-#include <hash_map>
-#include <hash_set>
+#include <unordered_map>
+#include <unordered_set>
 
 // Macro for convenient pointer addition.
 // Essentially treats the last two parameters as DWORDs.  The first
@@ -58,6 +58,7 @@ typedef void            (*lua_close_cdecl_t)            (lua_State*);
 typedef lua_State*      (*lua_newthread_cdecl_t)        (lua_State*);
 typedef int             (*lua_error_cdecl_t)            (lua_State*);
 typedef int             (*lua_sethook_cdecl_t)          (lua_State*, lua_Hook, int, int);
+typedef int             (*lua_gethookmask_cdecl_t)      (lua_State*);
 typedef int             (*lua_getinfo_cdecl_t)          (lua_State*, const char*, lua_Debug* ar);
 typedef void            (*lua_remove_cdecl_t)           (lua_State*, int);
 typedef void            (*lua_settable_cdecl_t)         (lua_State*, int);
@@ -125,6 +126,7 @@ typedef void            (__stdcall *lua_close_stdcall_t)          (lua_State*);
 typedef lua_State*      (__stdcall *lua_newthread_stdcall_t)      (lua_State*);
 typedef int             (__stdcall *lua_error_stdcall_t)          (lua_State*);
 typedef int             (__stdcall *lua_sethook_stdcall_t)        (lua_State*, lua_Hook_stdcall, int, int);
+typedef int             (__stdcall *lua_gethookmaskstdcall_t)     (lua_State*);
 typedef int             (__stdcall *lua_getinfo_stdcall_t)        (lua_State*, const char*, lua_Debug* ar);
 typedef void            (__stdcall *lua_remove_stdcall_t)         (lua_State*, int);
 typedef void            (__stdcall *lua_settable_stdcall_t)       (lua_State*, int);
@@ -215,6 +217,7 @@ struct LuaInterface
     lua_error_cdecl_t            lua_error_dll_cdecl;
     lua_gettop_cdecl_t           lua_gettop_dll_cdecl;
     lua_sethook_cdecl_t          lua_sethook_dll_cdecl;
+    lua_gethookmask_cdecl_t      lua_gethookmask_dll_cdecl;
     lua_getinfo_cdecl_t          lua_getinfo_dll_cdecl;
     lua_remove_cdecl_t           lua_remove_dll_cdecl;
     lua_settable_cdecl_t         lua_settable_dll_cdecl;
@@ -283,6 +286,7 @@ struct LuaInterface
     lua_error_stdcall_t          lua_error_dll_stdcall;
     lua_gettop_stdcall_t         lua_gettop_dll_stdcall;
     lua_sethook_stdcall_t        lua_sethook_dll_stdcall;
+    lua_gethookmaskstdcall_t     lua_gethookmask_dll_stdcall;
     lua_getinfo_stdcall_t        lua_getinfo_dll_stdcall;
     lua_remove_stdcall_t         lua_remove_dll_stdcall;
     lua_settable_stdcall_t       lua_settable_dll_stdcall;
@@ -416,10 +420,10 @@ std::set<std::string>           g_loadedModules;
 CriticalSection                 g_loadedModulesCriticalSection;
 
 std::vector<LuaInterface>       g_interfaces;
-stdext::hash_map<void*, void*>  g_hookedFunctionMap;
+std::unordered_map<void*, void*>  g_hookedFunctionMap;
 
-stdext::hash_set<std::string>   g_warnedAboutLua;   // Indivates that we've warned the module contains Lua functions but none were loaded.
-stdext::hash_set<std::string>   g_warnedAboutPdb;   // Indicates that we've warned about a module having a mismatched PDB.
+std::unordered_set<std::string>   g_warnedAboutLua;   // Indivates that we've warned the module contains Lua functions but none were loaded.
+std::unordered_set<std::string>   g_warnedAboutPdb;   // Indicates that we've warned about a module having a mismatched PDB.
 bool                            g_warnedAboutThreads = false;
 bool                            g_warnedAboutJit     = false;
 
@@ -2771,12 +2775,12 @@ std::string GetApplicationDirectory()
 
 }
 
-bool LoadLuaFunctions(const stdext::hash_map<std::string, DWORD64>& symbols, HANDLE hProcess)
+bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, HANDLE hProcess)
 {
 
     #define GET_FUNCTION_OPTIONAL(function)                                                                                     \
         {                                                                                                                       \
-            stdext::hash_map<std::string, DWORD64>::const_iterator iterator = symbols.find(#function);                          \
+            std::unordered_map<std::string, DWORD64>::const_iterator iterator = symbols.find(#function);                          \
             if (iterator != symbols.end())                                                                                      \
             {                                                                                                                   \
                 luaInterface.function##_dll_cdecl = reinterpret_cast<function##_cdecl_t>(iterator->second);                     \
@@ -3171,7 +3175,7 @@ bool LocateSymbolFile(const IMAGEHLP_MODULE64& moduleInfo, char fileName[_MAX_PA
 BOOL CALLBACK GatherSymbolsCallback(PSYMBOL_INFO pSymInfo, ULONG SymbolSize, PVOID UserContext)
 {
     
-    stdext::hash_map<std::string, DWORD64>* symbols = reinterpret_cast<stdext::hash_map<std::string, DWORD64>*>(UserContext);
+    std::unordered_map<std::string, DWORD64>* symbols = reinterpret_cast<std::unordered_map<std::string, DWORD64>*>(UserContext);
 
     if (pSymInfo != NULL && pSymInfo->Name != NULL)
     {
@@ -3218,7 +3222,7 @@ bool ScanForSignature(DWORD64 start, DWORD64 length, const char* signature)
 
 }
 
-void LoadSymbolsRecursively(std::set<std::string>& loadedModules, stdext::hash_map<std::string, DWORD64>& symbols, HANDLE hProcess, HMODULE hModule)
+void LoadSymbolsRecursively(std::set<std::string>& loadedModules, std::unordered_map<std::string, DWORD64>& symbols, HANDLE hProcess, HMODULE hModule)
 {
 
     assert(hModule != NULL);
@@ -3436,7 +3440,7 @@ void PostLoadLibrary(HMODULE hModule)
         //SymSetOptions(SYMOPT_DEBUG);
 
         std::set<std::string> loadedModules;
-        stdext::hash_map<std::string, DWORD64> symbols;
+        std::unordered_map<std::string, DWORD64> symbols;
 
         LoadSymbolsRecursively(loadedModules, symbols, hProcess, hModule);
 
@@ -3603,4 +3607,67 @@ lua_CFunction CreateCFunction(unsigned long api, lua_CFunction_dll function)
 
     return (lua_CFunction)InstanceFunction(CFunctionHandler, reinterpret_cast<unsigned long>(args));
     
+}
+
+void SetHookMode(unsigned long api, lua_State* L, HookMode mode)
+{
+
+   if (mode == HookMode_None)
+   {
+      lua_sethook_dll(api, L, NULL, 0, 0);
+   }
+   else
+   {
+      int mask;
+
+      switch (mode)
+      {
+      case HookMode_CallsOnly:
+         mask = LUA_MASKCALL;
+         break;
+      case HookMode_CallsAndReturns:
+         mask = LUA_MASKCALL | LUA_MASKRET;
+         break;
+      case HookMode_Full:
+         mask = LUA_MASKCALL | LUA_MASKRET | LUA_MASKLINE;
+         break;
+      }
+
+      lua_sethook_dll(api, L, g_interfaces[api].HookHandler, mask, 0);
+   }
+}
+
+int lua_gethookmask(unsigned long api, lua_State *L)
+{
+   if (g_interfaces[api].lua_gethookmask_dll_cdecl != NULL)
+   {
+      return g_interfaces[api].lua_gethookmask_dll_cdecl(L);
+   }
+   else
+   {
+      return g_interfaces[api].lua_gethookmask_dll_stdcall(L);
+   }
+}
+
+HookMode GetHookMode(unsigned long api, lua_State* L)
+{
+
+   int mask = lua_gethookmask(api, L);
+
+   if (mask == 0)
+   {
+      return HookMode_None;
+   }
+   else if (mask == (LUA_MASKCALL))
+   {
+      return HookMode_CallsOnly;
+   }
+   else if (mask == (LUA_MASKCALL | LUA_MASKRET))
+   {
+      return HookMode_CallsAndReturns;
+   }
+   else
+   {
+      return HookMode_Full;
+   }
 }

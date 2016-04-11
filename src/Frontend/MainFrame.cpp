@@ -77,7 +77,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include <shlobj.h>
 
 #include <algorithm>
-#include <hash_map>
+#include <unordered_map>
 
 
 // Event used to communicate when the update data has been downloaded.
@@ -5130,7 +5130,7 @@ void MainFrame::OnThreadExit(ThreadEvent& event)
     // the project files in linear time.
 
     FileStatusThread* thread = m_fileStatusThread[0];
-    stdext::hash_map<std::string, SourceControl::Status> statusMap;
+    std::unordered_map<std::string, SourceControl::Status> statusMap;
 
     for (unsigned int i = 0; i < thread->GetNumFiles(); ++i)
     {
@@ -5142,7 +5142,7 @@ void MainFrame::OnThreadExit(ThreadEvent& event)
 
         Project::File* file = m_project->GetFile(i);
 
-        stdext::hash_map<std::string, SourceControl::Status>::iterator iterator;
+        std::unordered_map<std::string, SourceControl::Status>::iterator iterator;
         iterator = statusMap.find(std::string(file->fileName.GetFullPath()));
 
         if (iterator != statusMap.end())

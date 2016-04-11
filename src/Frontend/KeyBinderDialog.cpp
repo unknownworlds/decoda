@@ -24,7 +24,7 @@ along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 #include "KeyMonitorTextCtrl.h"
 #include "StlUtility.h"
 
-#include <hash_map>
+#include <unordered_map>
 #include <algorithm>
 #include <assert.h>
 
@@ -141,12 +141,12 @@ void KeyBinderDialog::Initialize()
     // Add the commands to the tree.
 
     wxTreeItemId root = m_commandTreeCtrl->AddRoot("Commands");
-    stdext::hash_map<std::string, wxTreeItemId> groups;
+    std::unordered_map<std::string, wxTreeItemId> groups;
 
     for (unsigned int i = 0; i < m_commands.size(); ++i)
     {
 
-        stdext::hash_map<std::string, wxTreeItemId>::const_iterator iterator;
+        std::unordered_map<std::string, wxTreeItemId>::const_iterator iterator;
         iterator = groups.find(m_commands[i]->group.ToAscii());
 
         wxTreeItemId groupNode;

@@ -1,4 +1,4 @@
-
+#include <algorithm>
 #include <vector>
 #include <wx/process.h>
 

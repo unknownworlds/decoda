@@ -19,7 +19,7 @@ You should have received a copy of the GNU General Public License
 along with Decoda.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
+#include <algorithm>
 #include "LineMapper.h"
 #include "Tokenizer.h"
 
