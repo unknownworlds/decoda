@@ -1,35 +1,38 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxscintilla", "wxscintilla.vcxproj", "{3E0EB4CE-94D5-4226-A410-D31F731AA110}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Win32 = Debug|Win32
-		DebugDev|Win32 = DebugDev|Win32
-		DebugUnicode|Win32 = DebugUnicode|Win32
-		DebugUniv|Win32 = DebugUniv|Win32
-		Release|Win32 = Release|Win32
-		ReleaseDev|Win32 = ReleaseDev|Win32
-		ReleaseUnicode|Win32 = ReleaseUnicode|Win32
-		ReleaseUniv|Win32 = ReleaseUniv|Win32
+		Debug|x86 = Debug|x86
+		DebugDev|x86 = DebugDev|x86
+		DebugUnicode|x86 = DebugUnicode|x86
+		DebugUniv|x86 = DebugUniv|x86
+		Release|x86 = Release|x86
+		ReleaseDev|x86 = ReleaseDev|x86
+		ReleaseUnicode|x86 = ReleaseUnicode|x86
+		ReleaseUniv|x86 = ReleaseUniv|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Debug|Win32.ActiveCfg = Debug|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Debug|Win32.Build.0 = Debug|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugDev|Win32.ActiveCfg = DebugDev|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugDev|Win32.Build.0 = DebugDev|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUnicode|Win32.ActiveCfg = DebugUnicode|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUnicode|Win32.Build.0 = DebugUnicode|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUniv|Win32.ActiveCfg = DebugUniv|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUniv|Win32.Build.0 = DebugUniv|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Release|Win32.ActiveCfg = Release|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Release|Win32.Build.0 = Release|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseDev|Win32.ActiveCfg = ReleaseDev|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseDev|Win32.Build.0 = ReleaseDev|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUnicode|Win32.ActiveCfg = ReleaseUnicode|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUnicode|Win32.Build.0 = ReleaseUnicode|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUniv|Win32.ActiveCfg = ReleaseUniv|Win32
-		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUniv|Win32.Build.0 = ReleaseUniv|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Debug|x86.ActiveCfg = Debug|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Debug|x86.Build.0 = Debug|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugDev|x86.ActiveCfg = DebugDev|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugDev|x86.Build.0 = DebugDev|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUnicode|x86.ActiveCfg = DebugUnicode|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUnicode|x86.Build.0 = DebugUnicode|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUniv|x86.ActiveCfg = DebugUniv|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.DebugUniv|x86.Build.0 = DebugUniv|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Release|x86.ActiveCfg = Release|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.Release|x86.Build.0 = Release|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseDev|x86.ActiveCfg = ReleaseDev|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseDev|x86.Build.0 = ReleaseDev|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUnicode|x86.ActiveCfg = ReleaseUnicode|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUnicode|x86.Build.0 = ReleaseUnicode|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUniv|x86.ActiveCfg = ReleaseUniv|Win32
+		{3E0EB4CE-94D5-4226-A410-D31F731AA110}.ReleaseUniv|x86.Build.0 = ReleaseUniv|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
