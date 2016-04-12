@@ -369,6 +369,7 @@ struct LuaInterface
    lua_checkstack_stdcall_t     lua_checkstack_dll_stdcall;
 
    lua_CFunction                DecodaOutput;
+   lua_CFunction                DecodaBreakOnError;
    lua_CFunction                CPCallHandler;
    lua_Hook                     HookHandler;
 
@@ -537,6 +538,34 @@ __declspec(naked) int DecodaOutput(unsigned long api, lua_State* L)
    INTERCEPT_EPILOG(4)
 
 }
+
+int DecodaBreakOnErrorWorker(unsigned long api, lua_State* L, bool& stdcall)
+{
+
+   stdcall = g_interfaces[api].stdcall;
+
+   bool stop = lua_toboolean_dll(api, L, 1);
+   DebugBackend::Get().BreakOnError(stop);
+
+   return 0;
+
+}
+#pragma auto_inline()
+__declspec(naked) int DecodaBreakOnError(unsigned long api, lua_State* L)
+{
+
+   int result;
+   bool stdcall;
+
+   INTERCEPT_PROLOG()
+
+      result = DecodaBreakOnErrorWorker(api, L, stdcall);
+
+   INTERCEPT_EPILOG(4)
+
+}
+
+#pragma auto_inline(off)
 
 #pragma auto_inline(off)
 int CPCallHandlerWorker(unsigned long api, lua_State* L, bool& stdcall)
@@ -946,6 +975,7 @@ bool GetAreInterceptsEnabled()
 void RegisterDebugLibrary(unsigned long api, lua_State* L)
 {
    lua_register_dll(api, L, "decoda_output", g_interfaces[api].DecodaOutput);
+   lua_register_dll(api, L, "decoda_break_on_error", g_interfaces[api].DecodaBreakOnError);
 }
 
 int GetGlobalsIndex(unsigned long api)
@@ -3413,6 +3443,7 @@ bool LoadLuaFunctions(const std::unordered_map<std::string, DWORD64>& symbols, H
    // Setup our API.
 
    luaInterface.DecodaOutput = (lua_CFunction)InstanceFunction(DecodaOutput, api);
+   luaInterface.DecodaBreakOnError = (lua_CFunction)InstanceFunction(DecodaBreakOnError, api);
    luaInterface.CPCallHandler = (lua_CFunction)InstanceFunction(CPCallHandler, api);
    luaInterface.HookHandler = (lua_Hook)InstanceFunction(HookHandler, api);
 

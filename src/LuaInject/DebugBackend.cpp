@@ -146,6 +146,7 @@ DebugBackend::DebugBackend()
    m_mode = Mode_Continue;
    m_log = NULL;
    m_warnedAboutUserData = false;
+   m_breakOnError = true;
 }
 
 DebugBackend::~DebugBackend()
@@ -693,6 +694,11 @@ void DebugBackend::Message(const char* message, MessageType type)
    m_eventChannel.Flush();
 }
 
+void DebugBackend::BreakOnError(bool enabled)
+{
+   m_breakOnError = enabled;
+}
+
 void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
 {
 
@@ -816,45 +822,46 @@ void DebugBackend::HookCallback(unsigned long api, lua_State* L, lua_Debug* ar)
       bool stop = false;
       bool onLastStepLine = false;
 
-      //Keep updating onLastStepLine even if the mode is Mode_Continue if were still on the same line so we don't trigger
-      if (vm->luaJitWorkAround)
-      {
-         int stackDepth = GetStackDepth(api, L);
-
-         //We will get multiple line events for the same line in LuaJIT if there are only calls to C functions on the line 
-         if (vm->lastStepLine == GetCurrentLine(api, ar))
+      if (m_stepVmName.empty() || vm->name == m_stepVmName) {
+         //Keep updating onLastStepLine even if the mode is Mode_Continue if were still on the same line so we don't trigger
+         if (vm->luaJitWorkAround)
          {
-            onLastStepLine = vm->lastStepScript == scriptIndex && vm->callStackDepth != 0 && stackDepth == vm->callStackDepth;
-         }
+            int stackDepth = GetStackDepth(api, L);
 
-         // If we're stepping on each line or we just stepped out of a function that
-         // we were stepping over, break.
-         if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
-         {
-            if (stackDepth < vm->callStackDepth || (stackDepth == vm->callStackDepth && !onLastStepLine))
+            //We will get multiple line events for the same line in LuaJIT if there are only calls to C functions on the line 
+            if (vm->lastStepLine == GetCurrentLine(api, ar))
             {
-               // We've returned to the level when the function was called.
-               vm->callCount = 0;
-               vm->callStackDepth = 0;
+               onLastStepLine = vm->lastStepScript == scriptIndex && vm->callStackDepth != 0 && stackDepth == vm->callStackDepth;
+            }
+
+            // If we're stepping on each line or we just stepped out of a function that
+            // we were stepping over, break.
+            if (m_mode == Mode_StepOver && vm->callStackDepth > 0)
+            {
+               if (stackDepth < vm->callStackDepth || (stackDepth == vm->callStackDepth && !onLastStepLine))
+               {
+                  // We've returned to the level when the function was called.
+                  vm->callCount = 0;
+                  vm->callStackDepth = 0;
+               }
             }
          }
-      }
 
-      if (scriptIndex != -1)
-      {
-         // Check to see if we're on a breakpoint and should break.
-         if (!onLastStepLine && m_scripts[scriptIndex]->GetHasBreakPoint(GetCurrentLine(api, ar) - 1))
+         if (scriptIndex != -1)
+         {
+            // Check to see if we're on a breakpoint and should break.
+            if (!onLastStepLine && m_scripts[scriptIndex]->GetHasBreakPoint(GetCurrentLine(api, ar) - 1))
+            {
+               stop = true;
+            }
+         }
+      
+         //Break if were doing some kind of stepping 
+         if (!onLastStepLine && (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0)))
          {
             stop = true;
          }
       }
-
-      //Break if were doing some kind of stepping 
-      if (!onLastStepLine && (m_mode == Mode_StepInto || (m_mode == Mode_StepOver && vm->callCount == 0)))
-      {
-         stop = true;
-      }
-
       // We need to exit the critical section before waiting so that we don't
       // monopolize it.
       m_criticalSection.Exit();
@@ -1103,10 +1110,10 @@ void DebugBackend::CommandThreadProc()
             Continue();
             break;
          case CommandId_StepOver:
-            StepOver();
+            StepOver(L);
             break;
          case CommandId_StepInto:
-            StepInto();
+            StepInto(L);
             break;
          case CommandId_DeleteAllBreakpoints:
             DeleteAllBreakpoints();
@@ -1125,7 +1132,7 @@ void DebugBackend::CommandThreadProc()
          }
          break;
          case CommandId_Break:
-            Break();
+            Break(L);
             break;
          case CommandId_Evaluate:
          {
@@ -1201,10 +1208,11 @@ void DebugBackend::ActiveLuaHookInAllVms()
    }
 }
 
-void DebugBackend::StepInto()
+void DebugBackend::StepInto(lua_State* L)
 {
-
    CriticalSectionLock lock(m_criticalSection);
+
+   SetSteppingVm(L);
 
    for (unsigned int i = 0; i < m_vms.size(); ++i)
    {
@@ -1217,10 +1225,25 @@ void DebugBackend::StepInto()
    ActiveLuaHookInAllVms();
 }
 
-void DebugBackend::StepOver()
+void DebugBackend::SetSteppingVm(lua_State* L)
 {
+   m_stepVmName.clear();
+   StateToVmMap::const_iterator i = m_stateToVm.find(L);
+   if (i != m_stateToVm.end()) {
+      int api = i->second->api;
+      lua_rawgetglobal_dll(api, L, "decoda_name");
+      const char* name = lua_tostring_dll(api, L, -1);
+      if (name) {
+         m_stepVmName = name;
+      }
+   }
+}
 
+void DebugBackend::StepOver(lua_State* L)
+{
    CriticalSectionLock lock(m_criticalSection);
+
+   SetSteppingVm(L);
 
    for (unsigned int i = 0; i < m_vms.size(); ++i)
    {
@@ -1236,7 +1259,6 @@ void DebugBackend::StepOver()
 
 void DebugBackend::Continue()
 {
-
    CriticalSectionLock lock(m_criticalSection);
 
    for (unsigned int i = 0; i < m_vms.size(); ++i)
@@ -1249,8 +1271,9 @@ void DebugBackend::Continue()
 
 }
 
-void DebugBackend::Break()
+void DebugBackend::Break(lua_State* L)
 {
+   SetSteppingVm(L);
    m_mode = Mode_StepInto;
    ActiveLuaHookInAllVms();
 }
@@ -1385,7 +1408,7 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
    //   |      |
    //   +------+
 
-   StackEntry nativeStack[100];
+   StackEntry nativeStack[s_maxStackSize];
    unsigned int nativeStackSize = 0;
 
    if (vm != NULL)
@@ -1393,7 +1416,7 @@ void DebugBackend::SendBreakEvent(unsigned long api, lua_State* L, int stackTop)
       // Remember how many stack levels to skip so when we evaluate we can adjust
       // the stack level accordingly.
       vm->stackTop = stackTop;
-      nativeStackSize = GetCStack(vm->hThread, nativeStack, 100);
+      nativeStackSize = GetCStack(vm->hThread, nativeStack, s_maxStackSize);
    }
    else
    {
@@ -1523,7 +1546,7 @@ int DebugBackend::ErrorHandler(unsigned long api, lua_State* L)
       message = "No error message available";
    }
 
-   if (!GetIsExceptionIgnored(message))
+   if (m_breakOnError && !GetIsExceptionIgnored(message))
    {
 
       // Send the exception event. Ignore the top of the stack when we send the
