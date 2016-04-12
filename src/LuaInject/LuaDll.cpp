@@ -2017,6 +2017,17 @@ HMODULE WINAPI LoadLibraryExW_intercept(LPCWSTR fileName, HANDLE hFile, DWORD dw
 
    ULONG cookie;
 
+   char buf[256];
+   sprintf(buf, "%ls", fileName);
+   // Do not load audioses.dll
+   // it's not necessary and will sometimes cause the game to hang
+   if (strstr(buf, "audioses") != NULL) {
+      return NULL;
+   }
+
+   sprintf(buf, "LoadLibraryExW_intercept for file name: %ls", fileName);
+   OutputDebugString(buf);
+   
    if (LdrLockLoaderLock_dll != NULL &&
       LdrUnlockLoaderLock_dll != NULL)
    {
@@ -3645,6 +3656,12 @@ void LoadSymbolsRecursively(std::set<std::string>& loadedModules, std::unordered
       char moduleFileName[_MAX_PATH];
       GetModuleFileNameEx(hProcess, hModule, moduleFileName, _MAX_PATH);
 
+      char buf[MAX_PATH];
+      if (strstr(moduleFileName, "lua") == NULL) {
+         sprintf(buf, "skipping symbol search for %s", moduleFileName);
+         OutputDebugString(buf);
+         return;  
+      }
       DWORD64 base = SymLoadModule64_dll(hProcess, NULL, moduleFileName, moduleName, (DWORD64)moduleInfo.lpBaseOfDll, moduleInfo.SizeOfImage);
 
 #ifdef VERBOSE
