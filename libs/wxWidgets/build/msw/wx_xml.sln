@@ -1,0 +1,64 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xml", "wx_xml.vcxproj", "{2B327E88-520D-493B-AB8F-520556F1183E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		DLL Debug|x86 = DLL Debug|x86
+		DLL Release|x86 = DLL Release|x86
+		DLL Unicode Debug|x86 = DLL Unicode Debug|x86
+		DLL Unicode Release|x86 = DLL Unicode Release|x86
+		DLL Universal Debug|x86 = DLL Universal Debug|x86
+		DLL Universal Release|x86 = DLL Universal Release|x86
+		DLL Universal Unicode Debug|x86 = DLL Universal Unicode Debug|x86
+		DLL Universal Unicode Release|x86 = DLL Universal Unicode Release|x86
+		Release|x86 = Release|x86
+		Unicode Debug|x86 = Unicode Debug|x86
+		Unicode Release|x86 = Unicode Release|x86
+		Universal Debug|x86 = Universal Debug|x86
+		Universal Release|x86 = Universal Release|x86
+		Universal Unicode Debug|x86 = Universal Unicode Debug|x86
+		Universal Unicode Release|x86 = Universal Unicode Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Debug|x86.ActiveCfg = Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Debug|x86.Build.0 = Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Debug|x86.ActiveCfg = DLL Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Debug|x86.Build.0 = DLL Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Release|x86.ActiveCfg = DLL Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Release|x86.Build.0 = DLL Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Unicode Debug|x86.ActiveCfg = DLL Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Unicode Debug|x86.Build.0 = DLL Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Unicode Release|x86.ActiveCfg = DLL Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Unicode Release|x86.Build.0 = DLL Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Debug|x86.ActiveCfg = DLL Universal Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Debug|x86.Build.0 = DLL Universal Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Release|x86.ActiveCfg = DLL Universal Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Release|x86.Build.0 = DLL Universal Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Unicode Debug|x86.ActiveCfg = DLL Universal Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Unicode Debug|x86.Build.0 = DLL Universal Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Unicode Release|x86.ActiveCfg = DLL Universal Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.DLL Universal Unicode Release|x86.Build.0 = DLL Universal Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Release|x86.ActiveCfg = Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Release|x86.Build.0 = Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Unicode Debug|x86.ActiveCfg = Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Unicode Debug|x86.Build.0 = Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Unicode Release|x86.ActiveCfg = Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Unicode Release|x86.Build.0 = Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Debug|x86.ActiveCfg = Universal Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Debug|x86.Build.0 = Universal Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Release|x86.ActiveCfg = Universal Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Release|x86.Build.0 = Universal Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Unicode Debug|x86.ActiveCfg = Universal Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Unicode Debug|x86.Build.0 = Universal Unicode Debug|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Unicode Release|x86.ActiveCfg = Universal Unicode Release|Win32
+		{2B327E88-520D-493B-AB8F-520556F1183E}.Universal Unicode Release|x86.Build.0 = Universal Unicode Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
