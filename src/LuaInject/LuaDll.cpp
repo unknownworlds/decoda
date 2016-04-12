@@ -2047,14 +2047,13 @@ HMODULE WINAPI LoadLibraryExW_intercept(LPCWSTR fileName, HANDLE hFile, DWORD dw
 
    ULONG cookie;
 
-   char buf[256];
-   sprintf(buf, "%ls", fileName);
-   // Do not load audioses.dll
+   // Do not load files other than stonehearth
    // it's not necessary and will sometimes cause the game to hang
-   if (strstr(buf, "audioses") != NULL) {
+   if (wcsstr(fileName, L"audioses") != NULL) {
       return NULL;
    }
 
+   char buf[256];
    sprintf(buf, "LoadLibraryExW_intercept for file name: %ls", fileName);
    OutputDebugString(buf);
    
