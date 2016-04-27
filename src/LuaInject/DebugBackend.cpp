@@ -147,6 +147,7 @@ DebugBackend::DebugBackend()
    m_log = NULL;
    m_warnedAboutUserData = false;
    m_breakOnError = true;
+   m_hasActiveBreakpoints = false;
 }
 
 DebugBackend::~DebugBackend()
@@ -335,7 +336,7 @@ DebugBackend::VirtualMachine* DebugBackend::AttachState(unsigned long api, lua_S
    vm->stackTop = 0;
    vm->luaJitWorkAround = false;
    vm->breakpointInStack = true;// Force the stack tobe checked when the first script is entered
-   vm->haveActiveBreakpoints = false;
+   vm->haveActiveBreakpoints = m_hasActiveBreakpoints;
 
    m_vms.push_back(vm);
    m_stateToVm.insert(std::make_pair(L, vm));
@@ -1259,6 +1260,7 @@ void DebugBackend::StepOver(lua_State* L)
 
 void DebugBackend::Continue()
 {
+   //m_stepVmName.clear();
    CriticalSectionLock lock(m_criticalSection);
 
    for (unsigned int i = 0; i < m_vms.size(); ++i)
@@ -1360,6 +1362,7 @@ void DebugBackend::SetHaveActiveBreakpoints(bool breakpointsActive)
 {
 
    //m_HookLock.Enter();
+   m_hasActiveBreakpoints = breakpointsActive;
 
    for (StateToVmMap::iterator it = m_stateToVm.begin(); it != m_stateToVm.end(); it++)
    {

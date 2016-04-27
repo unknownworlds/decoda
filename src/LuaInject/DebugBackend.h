@@ -598,6 +598,7 @@ private:
    FILE*                           m_log;
 
    bool                            m_breakOnError;
+   bool                            m_hasActiveBreakpoints;
    Mode                            m_mode;
    std::string                     m_stepVmName;
    HANDLE                          m_stepEvent;

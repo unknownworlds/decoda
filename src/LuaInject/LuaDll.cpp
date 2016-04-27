@@ -2052,9 +2052,10 @@ HMODULE WINAPI LoadLibraryExW_intercept(LPCWSTR fileName, HANDLE hFile, DWORD dw
    if (wcsstr(fileName, L"audioses") != NULL) {
       return NULL;
    }
-
+   
    char buf[256];
    sprintf(buf, "LoadLibraryExW_intercept for file name: %ls", fileName);
+   //DebugBackend::Get().Message(buf, MessageType_Error);
    OutputDebugString(buf);
    
    if (LdrLockLoaderLock_dll != NULL &&
