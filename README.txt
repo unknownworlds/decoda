@@ -5,7 +5,7 @@ BUILDING
 ========
 
 Decoda is built from premake4 project files. premake4 can be downloaded from
-http://industriousone.com/premake/download
+https://premake.github.io/
 
 Decoda has only been tested with the vs2013 target, however it may be possible
 to compile Decoda with older versions. It is not currently possible to build
